@@ -13,6 +13,7 @@ export default function Postulate() {
   const { user, profile } = useAuth();
   const nav = useNavigate();
   const [commissionId, setCommissionId] = useState("");
+  const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -22,9 +23,22 @@ export default function Postulate() {
     if (profile) nav("/mi-estado", { replace: true });
   }, [profile, nav]);
 
+  useEffect(() => {
+    if (user?.displayName && !fullName) setFullName(user.displayName);
+  }, [user, fullName]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    const name = fullName.trim();
+    if (!name) {
+      setError("Dinos cómo te llamas");
+      return;
+    }
+    if (name.length < 3) {
+      setError("El nombre debe tener al menos 3 caracteres");
+      return;
+    }
     if (!commissionId) {
       setError("Elige una comisión");
       return;
@@ -39,7 +53,7 @@ export default function Postulate() {
       const data: Partial<UserDoc> = {
         uid: user.uid,
         email: user.email ?? "",
-        displayName: user.displayName ?? user.email ?? "Sin nombre",
+        displayName: name,
         photoURL: user.photoURL ?? "",
         phone: phone.trim(),
         commissionId,
@@ -75,6 +89,24 @@ export default function Postulate() {
       </div>
 
       <form onSubmit={submit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Nombre completo <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Ej: María Pérez Rojas"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            maxLength={80}
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Como te conocen. Es el nombre que verán los organizadores y aparecerá en tu certificado si llegas a Tier 1.
+          </p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Comisión a la que postulas</label>
           <select
