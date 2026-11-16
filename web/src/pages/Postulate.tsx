@@ -5,7 +5,8 @@ import { db } from "../firebase";
 import { useAuth } from "../auth";
 import { getEventBySlug } from "../lib/events";
 import { createApplication, getApplication } from "../lib/applications";
-import type { ApplicationDoc, Availability, EventDoc } from "../types";
+import CustomQuestionFields from "../components/CustomQuestionFields";
+import type { ApplicationDoc, Availability, CustomAnswerValue, EventDoc } from "../types";
 
 const CLAUSE =
   'Entiendo que mi participación como Staff es fundamental para el evento. Si soy aceptado y falto a mi turno sin dar aviso con al menos 48 horas de anticipación, perderé la oportunidad de ser staff en futuros eventos del GDG Cochabamba y mi perfil será marcado en la base de datos de la comunidad.';
@@ -28,6 +29,7 @@ export default function Postulate() {
   const [availability, setAvailability] = useState<Availability | "">("");
   const [skills, setSkills] = useState("");
   const [motivation, setMotivation] = useState("");
+  const [customAnswers, setCustomAnswers] = useState<Record<string, CustomAnswerValue>>({});
   const [accepted, setAccepted] = useState(false);
 
   const [saving, setSaving] = useState(false);
@@ -80,6 +82,19 @@ export default function Postulate() {
     if (spotsLeft(commissionId).left <= 0) return setError("Esta comisión ya no tiene cupos.");
     if (!hasExperience) return setError("Indica si tienes experiencia previa");
     if (!availability) return setError("Indica tu disponibilidad el día del evento");
+    const customQuestions = event.customQuestions ?? [];
+    for (const q of customQuestions) {
+      if (!q.required) continue;
+      const v = customAnswers[q.id];
+      const empty =
+        v === undefined ||
+        (typeof v === "string" && !v.trim()) ||
+        (Array.isArray(v) && v.length === 0);
+      if (empty) {
+        setError(`Falta responder: ${q.label}`);
+        return;
+      }
+    }
     if (!accepted) return setError("Debes aceptar el acuerdo de responsabilidad");
     setError(null);
     setSaving(true);
@@ -98,6 +113,7 @@ export default function Postulate() {
         availability,
         skills: skills.trim(),
         motivation: motivation.trim(),
+        customAnswers,
       });
       nav(`/mis-postulaciones`);
     } catch (err: any) {
@@ -214,6 +230,16 @@ export default function Postulate() {
             <textarea value={motivation} onChange={(e) => setMotivation(e.target.value)} rows={3} maxLength={600} className={inputCls} />
           </Field>
         </Section>
+
+        {event.customQuestions && event.customQuestions.length > 0 && (
+          <Section title="Preguntas del evento">
+            <CustomQuestionFields
+              questions={event.customQuestions}
+              answers={customAnswers}
+              onChange={setCustomAnswers}
+            />
+          </Section>
+        )}
 
         <div className="border border-gray-200 rounded-lg p-4 bg-yellow-50">
           <p className="text-sm text-gray-800 italic">"{CLAUSE}"</p>

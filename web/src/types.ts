@@ -5,6 +5,16 @@ export type Tier = "none" | "T1" | "T2" | "T3";
 export type EventStatus = "draft" | "open" | "closed" | "past";
 export type ApplicationRole = "volunteer" | "leader";
 export type Availability = "full" | "partial" | "none";
+export type QuestionType = "short" | "paragraph" | "radio" | "checkboxes" | "select";
+
+export interface CustomQuestion {
+  id: string;
+  label: string;
+  type: QuestionType;
+  required: boolean;
+  options?: string[];
+  help?: string;
+}
 
 export interface UserDoc {
   uid: string;
@@ -42,11 +52,14 @@ export interface EventDoc {
   status: EventStatus;
   commissions: Commission[];
   location?: EventLocation;
+  customQuestions?: CustomQuestion[];
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;
   cancelCutoffHours?: number;
 }
+
+export type CustomAnswerValue = string | string[];
 
 export interface ApplicationDoc {
   uid: string;
@@ -62,6 +75,7 @@ export interface ApplicationDoc {
   availability?: Availability;
   skills?: string;
   motivation?: string;
+  customAnswers?: Record<string, CustomAnswerValue>;
   role: ApplicationRole;
   status: ApplicationStatus;
   tier: Tier;

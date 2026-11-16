@@ -42,6 +42,7 @@ export default function EditEvent() {
         selectedCatalog: selected,
         commissionLimits: limits,
         custom,
+        customQuestions: ev.customQuestions ?? [],
         cancelHours: ev.cancelCutoffHours ?? 48,
         status: ev.status,
       });
@@ -75,6 +76,7 @@ export default function EditEvent() {
         tagline: v.tagline.trim(),
         description: v.description.trim(),
         commissions,
+        customQuestions: v.customQuestions,
         location: {
           name: v.locationName.trim(),
           address: v.locationAddress.trim(),

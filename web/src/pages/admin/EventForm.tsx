@@ -2,7 +2,8 @@ import { useState } from "react";
 import { DEFAULT_CATALOG } from "../../config/catalog";
 import { slugify } from "../../lib/slug";
 import MapPicker from "../../components/MapPicker";
-import type { Commission, EventStatus } from "../../types";
+import CustomQuestionsEditor from "./CustomQuestionsEditor";
+import type { Commission, CustomQuestion, EventStatus } from "../../types";
 
 export interface EventFormValues {
   name: string;
@@ -16,6 +17,7 @@ export interface EventFormValues {
   selectedCatalog: Set<string>;
   commissionLimits: Record<string, number>;
   custom: Commission[];
+  customQuestions: CustomQuestion[];
   cancelHours: number;
   status: EventStatus;
 }
@@ -307,6 +309,19 @@ export default function EventForm({ initial, onSubmit, submitting, error, submit
             ))}
           </div>
         )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <label className="block text-sm font-medium">Preguntas personalizadas para este evento</label>
+        </div>
+        <p className="text-xs text-gray-500 mb-2">
+          Se muestran al postulante además de las preguntas estándar (nombre, teléfono, comisión, experiencia, disponibilidad, etc).
+        </p>
+        <CustomQuestionsEditor
+          value={v.customQuestions}
+          onChange={(customQuestions) => setV({ ...v, customQuestions })}
+        />
       </div>
 
       {error && (

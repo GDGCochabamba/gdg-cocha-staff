@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import type { Commission, EventDoc, EventStatus } from "../types";
+import type { Commission, CustomQuestion, EventDoc, EventStatus } from "../types";
 import { slugify } from "./slug";
 
 const COLL = "events";
@@ -38,6 +38,7 @@ export interface CreateEventInput {
   tagline?: string;
   description?: string;
   commissions: Commission[];
+  customQuestions?: CustomQuestion[];
   location?: {
     name?: string;
     address?: string;
@@ -64,6 +65,7 @@ export async function createEvent(input: CreateEventInput, createdBy: string): P
     description: input.description?.trim() || "",
     status: input.status ?? "draft",
     commissions: input.commissions,
+    customQuestions: input.customQuestions ?? [],
     location: input.location,
     cancelCutoffHours: input.cancelCutoffHours ?? 48,
     createdBy,

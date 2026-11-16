@@ -25,6 +25,7 @@ export default function CreateEvent() {
     selectedCatalog: new Set<string>(),
     commissionLimits: {},
     custom: [] as Commission[],
+    customQuestions: [],
     cancelHours: 48,
     status: "draft",
   };
@@ -56,6 +57,7 @@ export default function CreateEvent() {
           tagline: v.tagline.trim(),
           description: v.description.trim(),
           commissions,
+          customQuestions: v.customQuestions,
           location: {
             name: v.locationName.trim(),
             address: v.locationAddress.trim(),

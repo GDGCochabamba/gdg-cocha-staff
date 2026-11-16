@@ -37,6 +37,7 @@ export interface CreateApplicationInput {
   availability: "full" | "partial" | "none";
   skills?: string;
   motivation?: string;
+  customAnswers?: Record<string, string | string[]>;
 }
 
 export async function createApplication(input: CreateApplicationInput): Promise<void> {
@@ -54,6 +55,7 @@ export async function createApplication(input: CreateApplicationInput): Promise<
     availability: input.availability,
     skills: input.skills ?? "",
     motivation: input.motivation ?? "",
+    customAnswers: input.customAnswers ?? {},
     role: "volunteer",
     status: "pending",
     tier: "none",

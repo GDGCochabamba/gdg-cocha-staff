@@ -273,7 +273,24 @@ export default function ManageEvent() {
                               <div className="text-gray-800 whitespace-pre-line">{a.motivation}</div>
                             </div>
                           )}
-                          {!hasDetails && <div className="text-gray-500">Sin detalles adicionales.</div>}
+                          {event.customQuestions && event.customQuestions.length > 0 && a.customAnswers && (
+                            <div className="mt-3 pt-2 border-t border-gray-200 space-y-2">
+                              <div className="text-gray-500 text-xs uppercase tracking-wide">Preguntas del evento</div>
+                              {event.customQuestions.map((q) => {
+                                const v = a.customAnswers?.[q.id];
+                                const text = Array.isArray(v) ? v.join(", ") : (v ?? "");
+                                return (
+                                  <div key={q.id}>
+                                    <div className="text-gray-500">{q.label}:</div>
+                                    <div className="text-gray-800 whitespace-pre-line">{text || "—"}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {!hasDetails && (!event.customQuestions || event.customQuestions.length === 0) && (
+                            <div className="text-gray-500">Sin detalles adicionales.</div>
+                          )}
                         </td>
                       </tr>
                     )}
