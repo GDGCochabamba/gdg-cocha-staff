@@ -98,7 +98,6 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
   const [searching, setSearching] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
-  const [showResults, setShowResults] = useState(false);
   const [focused, setFocused] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,7 +108,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setShowResults(false);
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setFocused(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -129,7 +128,6 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
     if (coords) {
       setResults([]);
       handlePick(coords.lat, coords.lng, "Coordenadas pegadas");
-      setShowResults(false);
       return;
     }
 
@@ -138,7 +136,6 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
       try {
         const data = await searchPlaces(q);
         setResults(data);
-        setShowResults(true);
       } catch {
         setResults([]);
       } finally {
@@ -159,7 +156,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
 
   function pickResult(r: Place) {
     handlePick(r.lat, r.lon, r.display_name);
-    setShowResults(false);
+    setFocused(false);
     setQuery(r.name || r.display_name.split(",")[0]);
   }
 
