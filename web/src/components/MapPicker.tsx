@@ -49,11 +49,7 @@ interface Place {
   category: string;
 }
 
-async function searchPlaces(query: string, signal: AbortSignal): Promise<Place[]> {
-  const q = query.trim();
-  if (!q) return [];
-
-  // Photon is designed for autocomplete (location-biased, typo-tolerant, fast)
+async function searchPhoton(q: string, signal: AbortSignal): Promise<Place[]> {
   const [lat, lon] = COCHABAMBA;
   const bbox = COCHA_BBOX.join(",");
   const url =
@@ -65,7 +61,7 @@ async function searchPlaces(query: string, signal: AbortSignal): Promise<Place[]
   const data = await res.json();
   const feats: any[] = data.features ?? [];
 
-  const places: Place[] = feats
+  return feats
     .filter((f) => f.geometry?.coordinates?.length === 2)
     .map((f) => {
       const p = f.properties ?? {};
@@ -78,10 +74,61 @@ async function searchPlaces(query: string, signal: AbortSignal): Promise<Place[]
         name: p.name || p.street || p.city || "Sin nombre",
         address: addrParts.join(", "),
         category: p.osm_value || p.osm_key || p.type || "",
-      };
+      } as Place;
     });
+}
 
-  return places;
+async function searchNominatim(q: string, signal: AbortSignal): Promise<Place[]> {
+  const bbox = `viewbox=${COCHA_BBOX[0]},${COCHA_BBOX[3]},${COCHA_BBOX[2]},${COCHA_BBOX[1]}`;
+  const url =
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10&countrycodes=bo&${bbox}&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { signal, headers: { "Accept-Language": "es" } });
+  if (!res.ok) return [];
+  const data: any[] = await res.json();
+
+  return data.map((d) => {
+    const a = d.address ?? {};
+    const addrParts = [a.road, a.house_number, a.neighbourhood, a.suburb, a.city || a.town, a.state, a.country].filter(Boolean);
+    return {
+      lat: parseFloat(d.lat),
+      lon: parseFloat(d.lon),
+      name: d.name || a.road || a.city || d.display_name.split(",")[0],
+      address: addrParts.join(", ") || d.display_name,
+      category: d.type || d.class || "",
+    } as Place;
+  });
+}
+
+async function searchPlaces(query: string, signal: AbortSignal): Promise<Place[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  // Try Photon (fast, POI-strong, typo-tolerant)
+  let results: Place[] = [];
+  try {
+    results = await searchPhoton(q, signal);
+  } catch {
+    // ignore
+  }
+  if (signal.aborted) return [];
+
+  // Fallback to Nominatim (better for street names, addresses, lesser-known POIs)
+  if (results.length === 0) {
+    try {
+      results = await searchNominatim(q, signal);
+    } catch {
+      // ignore
+    }
+  }
+
+  // Dedupe by rounded coords
+  const seen = new Set<string>();
+  return results.filter((r) => {
+    const k = `${r.lat.toFixed(5)},${r.lon.toFixed(5)}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 function parseCoords(input: string): { lat: number; lng: number } | null {
@@ -294,7 +341,8 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
         {open && (results.length > 0 || showEmpty) && (
           <ul
             role="listbox"
-            className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto"
+            style={{ zIndex: 1000 }}
+            className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
           >
             {showEmpty && (
               <li className="px-3 py-3 text-sm text-gray-500">
