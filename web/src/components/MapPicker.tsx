@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -13,8 +13,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const COCHA_VIEWBOX = "-66.35,-17.25,-65.95,-17.55";
 const COCHABAMBA: [number, number] = [-17.3935, -66.157];
+// Cochabamba metro bbox (minLon, minLat, maxLon, maxLat)
+const COCHA_BBOX = [-66.35, -17.55, -65.95, -17.25];
 
 function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   useMapEvents({
@@ -43,32 +44,44 @@ export interface MapPickerProps {
 interface Place {
   lat: number;
   lon: number;
-  display_name: string;
-  name?: string;
+  name: string;
+  address: string;
+  category: string;
 }
 
-async function searchPlaces(query: string): Promise<Place[]> {
+async function searchPlaces(query: string, signal: AbortSignal): Promise<Place[]> {
   const q = query.trim();
   if (!q) return [];
-  const bbox = `viewbox=${COCHA_VIEWBOX}&bounded=1`;
-  const base = "https://nominatim.openstreetmap.org/search";
-  const url1 = `${base}?format=jsonv2&addressdetails=1&limit=8&countrycodes=bo&${bbox}&q=${encodeURIComponent(q)}`;
 
-  const res1 = await fetch(url1, { headers: { "Accept-Language": "es" } });
-  let data: any[] = res1.ok ? await res1.json() : [];
+  // Photon is designed for autocomplete (location-biased, typo-tolerant, fast)
+  const [lat, lon] = COCHABAMBA;
+  const bbox = COCHA_BBOX.join(",");
+  const url =
+    `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}` +
+    `&limit=10&lang=default&lat=${lat}&lon=${lon}&location_bias_scale=0.3&bbox=${bbox}`;
 
-  if (data.length === 0) {
-    const url2 = `${base}?format=jsonv2&addressdetails=1&limit=8&countrycodes=bo&q=${encodeURIComponent(q)}`;
-    const res2 = await fetch(url2, { headers: { "Accept-Language": "es" } });
-    data = res2.ok ? await res2.json() : [];
-  }
+  const res = await fetch(url, { signal });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const feats: any[] = data.features ?? [];
 
-  return data.map((d: any) => ({
-    lat: parseFloat(d.lat),
-    lon: parseFloat(d.lon),
-    display_name: d.display_name,
-    name: d.name || d.display_name.split(",")[0],
-  }));
+  const places: Place[] = feats
+    .filter((f) => f.geometry?.coordinates?.length === 2)
+    .map((f) => {
+      const p = f.properties ?? {};
+      const [lon, lat] = f.geometry.coordinates;
+      const addrParts = [p.street, p.housenumber, p.district, p.city, p.state, p.country]
+        .filter(Boolean);
+      return {
+        lat,
+        lon,
+        name: p.name || p.street || p.city || "Sin nombre",
+        address: addrParts.join(", "),
+        category: p.osm_value || p.osm_key || p.type || "",
+      };
+    });
+
+  return places;
 }
 
 function parseCoords(input: string): { lat: number; lng: number } | null {
@@ -81,6 +94,29 @@ function parseCoords(input: string): { lat: number; lng: number } | null {
   return null;
 }
 
+const categoryLabel: Record<string, string> = {
+  university: "Universidad",
+  school: "Escuela",
+  college: "Colegio",
+  restaurant: "Restaurante",
+  cafe: "Café",
+  hospital: "Hospital",
+  hotel: "Hotel",
+  bank: "Banco",
+  pharmacy: "Farmacia",
+  supermarket: "Supermercado",
+  mall: "Centro comercial",
+  stadium: "Estadio",
+  theatre: "Teatro",
+  cinema: "Cine",
+  park: "Parque",
+  square: "Plaza",
+  church: "Iglesia",
+  building: "Edificio",
+  house: "Casa",
+  residential: "Residencial",
+};
+
 export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapPickerProps) {
   const [pos, setPos] = useState<[number, number] | null>(
     typeof lat === "number" && typeof lng === "number" ? [lat, lng] : null,
@@ -88,10 +124,12 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -102,22 +140,16 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
     function onDoc(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
     document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    const q = query.trim();
+    if (abortRef.current) abortRef.current.abort();
 
-    if (q.length < 3) {
+    const q = query.trim();
+    if (q.length < 2) {
       setResults([]);
       setSearching(false);
       return;
@@ -134,15 +166,20 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
     setSearching(true);
     setOpen(true);
     debounceRef.current = setTimeout(async () => {
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       try {
-        const data = await searchPlaces(q);
-        setResults(data);
+        const data = await searchPlaces(q, ctrl.signal);
+        if (!ctrl.signal.aborted) {
+          setResults(data);
+          setHighlighted(0);
+        }
       } catch {
-        setResults([]);
+        if (!ctrl.signal.aborted) setResults([]);
       } finally {
-        setSearching(false);
+        if (!ctrl.signal.aborted) setSearching(false);
       }
-    }, 350);
+    }, 200);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -156,9 +193,9 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
   }
 
   function pickResult(r: Place) {
-    handlePick(r.lat, r.lon, r.display_name);
+    handlePick(r.lat, r.lon, r.address || r.name);
     setOpen(false);
-    setQuery(r.name || r.display_name.split(",")[0]);
+    setQuery(r.name);
   }
 
   function useCurrentLocation() {
@@ -190,9 +227,23 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      if (results.length > 0) pickResult(results[0]);
+      if (results[highlighted]) pickResult(results[highlighted]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted((h) => Math.min(h + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted((h) => Math.max(h - 1, 0));
     }
   }
+
+  const showEmpty = useMemo(
+    () => open && !searching && results.length === 0 && query.trim().length >= 2,
+    [open, searching, results, query],
+  );
 
   return (
     <div className="space-y-2">
@@ -204,12 +255,15 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => query.trim().length >= 3 && setOpen(true)}
+              onFocus={() => query.trim().length >= 2 && setOpen(true)}
               onKeyDown={handleKeyDown}
-              placeholder="Buscar venue o dirección en Cochabamba"
+              placeholder="Buscar venue, dirección o POI en Cochabamba"
               className="w-full border border-gray-300 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gBlue/40 focus:border-gBlue"
               autoComplete="off"
               spellCheck={false}
+              role="combobox"
+              aria-expanded={open}
+              aria-autocomplete="list"
             />
             {searching && (
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
@@ -237,33 +291,46 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
           </button>
         </div>
 
-        {open && query.trim().length >= 3 && (
-          <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
-            {searching && (
-              <div className="px-3 py-3 text-sm text-gray-500 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Buscando "{query}"…
-              </div>
+        {open && (results.length > 0 || showEmpty) && (
+          <ul
+            role="listbox"
+            className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto"
+          >
+            {showEmpty && (
+              <li className="px-3 py-3 text-sm text-gray-500">
+                Sin resultados para "{query}". Prueba otro término o clickea directo en el mapa.
+              </li>
             )}
-            {!searching && results.length === 0 && (
-              <div className="px-3 py-3 text-sm text-gray-500">
-                Sin resultados. Prueba otro término o clickea directo en el mapa.
-              </div>
-            )}
-            {!searching && results.map((r, i) => (
-              <button
-                key={i}
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); pickResult(r); }}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0 flex items-start gap-2"
+            {results.map((r, i) => (
+              <li
+                key={`${r.lat},${r.lon},${i}`}
+                role="option"
+                aria-selected={i === highlighted}
               >
-                <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-gray-900 truncate">{r.name}</div>
-                  <div className="text-xs text-gray-500 line-clamp-2">{r.display_name}</div>
-                </div>
-              </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); pickResult(r); }}
+                  onMouseEnter={() => setHighlighted(i)}
+                  className={`w-full text-left px-3 py-2.5 text-sm border-b border-gray-100 last:border-0 flex items-start gap-2 ${
+                    i === highlighted ? "bg-blue-50" : "bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900 truncate">{r.name}</span>
+                      {categoryLabel[r.category] && (
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {categoryLabel[r.category]}
+                        </span>
+                      )}
+                    </div>
+                    {r.address && <div className="text-xs text-gray-500 line-clamp-2">{r.address}</div>}
+                  </div>
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
 
@@ -291,7 +358,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
       </div>
 
       <p className="text-xs text-gray-500">
-        Escribe mínimo 3 letras para buscar · Enter elige el primer resultado · Click en el mapa pone el pin directo · La ubicación no se guarda hasta que pulses el botón <span className="font-medium">Guardar cambios</span> abajo.
+        Escribe para buscar · ↑↓ navegar · Enter elegir · Esc cerrar · Click en mapa para pin manual · La ubicación se guarda al pulsar <span className="font-medium">Guardar cambios</span>.
       </p>
     </div>
   );
