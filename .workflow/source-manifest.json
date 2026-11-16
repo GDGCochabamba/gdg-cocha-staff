@@ -1,0 +1,123 @@
+{
+  "source_zip": "epic-flow-kit.zip",
+  "source_zip_sha256": "8de87e69a04297d5f414afd686d34cce0afdf39c50228e4087461f5604367ed2",
+  "imported_on": "2026-10-26",
+  "source_status": "reference_only_not_active_instructions",
+  "files": [
+    {
+      "path": "spec/operating-model.md",
+      "bytes": 10618,
+      "sha256": "8ffb07f5bbb9a74e312d31e8253696720d20a66889b82bf09c56eb88f716ab3c"
+    },
+    {
+      "path": "spec/dev-rules.md",
+      "bytes": 14295,
+      "sha256": "702d01a5cd910473632921e09fce2850e550a54dc5333317e38e246f73bf580b"
+    },
+    {
+      "path": "spec/pm-rules.md",
+      "bytes": 13785,
+      "sha256": "9db21884b55b3da2ef17434517786a07587b61c693fb7bd5912b9c96d3385184"
+    },
+    {
+      "path": "spec/executor-rules.md",
+      "bytes": 16231,
+      "sha256": "44ab06ef0e923bac32670eb881c2f40e05cf6e95052cf631b5da66fa679e1fa4"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5303,
+      "sha256": "32c6e36893e6cff28e715095eab7dcce53f7f67c277ad0589f77a4447bc39846"
+    },
+    {
+      "path": "DECISIONS-TO-RATIFY.md",
+      "bytes": 5202,
+      "sha256": "36ad95b80675d108f4c7264c7d0628634e5e95ec557f2bef322323cb1902f094"
+    },
+    {
+      "path": "templates/qa-prompt.md",
+      "bytes": 4925,
+      "sha256": "5c06c88142512cd5d4db5cece08645d38887e35f5908e42e9d9d439bcb0fa262"
+    },
+    {
+      "path": "templates/technical-epic.md",
+      "bytes": 4757,
+      "sha256": "be327f34d614bc0db2620e9f4d69b5767bd6a6d9d9f009a9c1554cc447f9bec4"
+    },
+    {
+      "path": "templates/business-epic.md",
+      "bytes": 5546,
+      "sha256": "ba6dfa7df895a0ca6eb2149f02a4dfbf1aeb53bb7e9be98eea7cb527fa97e79a"
+    },
+    {
+      "path": "templates/result-report.md",
+      "bytes": 2329,
+      "sha256": "8cec423b0d25e619958976578d3914ae613f329a39fc61ae20b529fc0c69f8d5"
+    },
+    {
+      "path": "templates/project-instructions.md",
+      "bytes": 4351,
+      "sha256": "25722e25b14f3174fee3625b5c5018be3f01a4e4cf8fa6d37b6e01575df8327c"
+    },
+    {
+      "path": "templates/read-back.md",
+      "bytes": 1545,
+      "sha256": "03a306940ce0c6553b84dbd93afc45d7c264ffb3aa6c0001f50856f2949e9e76"
+    },
+    {
+      "path": "templates/control-log-footer.md",
+      "bytes": 995,
+      "sha256": "b9b06de48d182be90550b9062834fdf6b7477b9c6afc9c7f04994f1af4185658"
+    },
+    {
+      "path": "prompts/executor.md",
+      "bytes": 4823,
+      "sha256": "28f765db8864a441238372d29bb5ad93d60636b6ab4468c6137da21fad199622"
+    },
+    {
+      "path": "prompts/architect.md",
+      "bytes": 5602,
+      "sha256": "4196a042dc4fd6462c2f25f2a01a628d301104c07338a9e3551f4149aa7a348e"
+    },
+    {
+      "path": "prompts/pm-agent.md",
+      "bytes": 3810,
+      "sha256": "de4808129a8bf88719ae14c58ce4e266fb09fd11d09686cfb48aec26f2a5e001"
+    },
+    {
+      "path": "prompts/qa-agent.md",
+      "bytes": 1897,
+      "sha256": "ecb5e937ed0a1ceb5c4cac53f0f948f1f1166cac77e427590f4451a5a47b1a32"
+    },
+    {
+      "path": "adapters/claude-code/CLAUDE.md.template",
+      "bytes": 16286,
+      "sha256": "4dca86532bb110f807dd4fcbac8c6d362a01b64a2fbd06adfbab4715223a53c4"
+    },
+    {
+      "path": "adapters/claude-code.md",
+      "bytes": 3162,
+      "sha256": "aaf90966d3fe4a7c76aeb1119f527a8273623cdcf3d1689db2ddfcb33588bed0"
+    },
+    {
+      "path": "adapters/frameworks.md",
+      "bytes": 8158,
+      "sha256": "55eceb86907286fd25c717419f7d95450bd5fc633d06e6e7a6ad4216713b267f"
+    },
+    {
+      "path": "adapters/AGENTS.md.template",
+      "bytes": 16330,
+      "sha256": "cbb71cd6f3f08cfc7ac5768b4113da489b682ada769979b1b0e91aeb86ab56c1"
+    },
+    {
+      "path": "adapters/orchestrator-state-machine.md",
+      "bytes": 5991,
+      "sha256": "ce139b510b8b355f30c21ac8f90c658304df2be49aa9c3e0d1f3563dce817b82"
+    },
+    {
+      "path": "bootstrap/new-project-checklist.md",
+      "bytes": 6629,
+      "sha256": "cfa6985407e6d18f9a3eef00dcdfaa56beb5fc00dbb2c7feac1e026b9273fb47"
+    }
+  ]
+}

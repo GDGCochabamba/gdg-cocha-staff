@@ -1,0 +1,77 @@
+{
+  "status": "planning_not_runtime_configuration",
+  "reviewed_on": "2026-10-26",
+  "objective": "included_usage_and_less_rework",
+  "allow_paid_api_or_overages": false,
+  "automatic_agent_launch": false,
+  "coordinator": {
+    "tool": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoning": "high",
+    "evidence": "planning_preference_not_runtime_change"
+  },
+  "primary_executor": {
+    "tool": "claude",
+    "model": "claude-sonnet-5",
+    "evidence": "local_saved_configuration"
+  },
+  "light_executor": {
+    "tool": "gemini",
+    "family": "Flash",
+    "exact_model": null,
+    "requires_resolution": true
+  },
+  "product": {
+    "tool": "claude",
+    "family": "Sonnet",
+    "escalation_family": "Opus",
+    "escalation_exact_model": null
+  },
+  "research": {
+    "tool": "gemini",
+    "default_family": "Flash",
+    "complex_family": "Pro",
+    "exact_model": null
+  },
+  "visual": {
+    "tool": "antigravity",
+    "default_family": "Gemini Flash",
+    "exact_model": null,
+    "account_catalog_verified": false
+  },
+  "review": {
+    "claude_author": "separate_codex_sol_session",
+    "codex_author": "separate_claude_sonnet_session"
+  },
+  "optional_tools": [
+    "cursor_free"
+  ],
+  "excluded_tools": [
+    "opencode"
+  ],
+  "quota_sharing": {
+    "gemini_antigravity": "unknown_do_not_assume_independent"
+  },
+  "confirmed_plan_names": {
+    "claude": "Max",
+    "openai": "Plus",
+    "google": "paid_basic_exact_name_unconfirmed",
+    "cursor": "Free"
+  },
+  "architecture": {
+    "tool": "codex",
+    "preferred_model": "gpt-6-astra",
+    "reasoning": "high",
+    "availability": "verify_before_use",
+    "fallback": {
+      "model": "gpt-6.1-sol",
+      "reasoning": "high"
+    },
+    "scope": "bounded_design_and_difficult_decisions"
+  },
+  "observed_local_configuration": {
+    "codex_model": "gpt-6.1-sol",
+    "codex_reasoning": "medium",
+    "claude_model": "claude-sonnet-5"
+  }
+}

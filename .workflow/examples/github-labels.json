@@ -1,0 +1,82 @@
+[
+  {
+    "name": "type:business",
+    "color": "5319E7",
+    "description": "Definición y aceptación de producto"
+  },
+  {
+    "name": "type:technical",
+    "color": "0052CC",
+    "description": "Implementación o trabajo técnico"
+  },
+  {
+    "name": "type:bug",
+    "color": "D73A4A",
+    "description": "Defecto reproducible"
+  },
+  {
+    "name": "scope:epic",
+    "color": "6F42C1",
+    "description": "Issue paraguas que agrupa sub-tickets"
+  },
+  {
+    "name": "effort:routine",
+    "color": "C5DEF5",
+    "description": "Trabajo mecánico, criterios claros; apto para modelo de bajo coste"
+  },
+  {
+    "name": "effort:standard",
+    "color": "5EBEFF",
+    "description": "Trabajo normal con alguna decisión; modelo equilibrado"
+  },
+  {
+    "name": "effort:deep",
+    "color": "1F6FEB",
+    "description": "Ambigüedad o impacto alto; modelo con mayor razonamiento"
+  },
+  {
+    "name": "status:draft",
+    "color": "EDEDED",
+    "description": "Alcance o criterios en preparación"
+  },
+  {
+    "name": "status:ready",
+    "color": "0E8A16",
+    "description": "Encargo preparado para iniciar"
+  },
+  {
+    "name": "status:in-progress",
+    "color": "FBCA04",
+    "description": "Trabajo en ejecución"
+  },
+  {
+    "name": "status:review",
+    "color": "1D76DB",
+    "description": "Verificación o revisión pendiente"
+  },
+  {
+    "name": "status:blocked",
+    "color": "B60205",
+    "description": "Impedimento documentado"
+  },
+  {
+    "name": "needs:readback-answer",
+    "color": "FBCA04",
+    "description": "El ejecutor pidió aclaración al arquitecto antes de arrancar"
+  },
+  {
+    "name": "priority:p0",
+    "color": "B60205",
+    "description": "Urgente"
+  },
+  {
+    "name": "priority:p1",
+    "color": "D93F0B",
+    "description": "Prioridad alta"
+  },
+  {
+    "name": "priority:p2",
+    "color": "C2E0C6",
+    "description": "Prioridad normal"
+  }
+]

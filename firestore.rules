@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isLeader() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userIsLeaderOf(commissionId) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return u.role == 'leader' && u.commissionId == commissionId;
+    }
+
+    // Public: event metadata, commissions config
+    match /meta/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users: one per signed-in Google account
+    match /users/{uid} {
+      // Any signed-in user can read any user's public fields (needed for leader to see their commission list)
+      allow read: if isSignedIn();
+
+      // Create own doc: either a normal volunteer postulation, or an admin bootstrap
+      // for one of the hardcoded admin emails.
+      allow create: if isSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && (
+          (
+            request.resource.data.role == 'volunteer'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.acceptedClauseAt != null
+          )
+          ||
+          (
+            request.resource.data.role == 'admin'
+            && request.resource.data.status == 'approved'
+            && request.auth.token.email in ['flores1102angel266@gmail.com']
+          )
+        );
+
+      // Self can update only their own clause acceptance, displayName, cancellation request
+      allow update: if isSelf(uid)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.tier == resource.data.tier
+        && request.resource.data.status in ['pending', 'cancelled']
+        && (resource.data.status == 'pending' || resource.data.status == 'approved');
+
+      // Admin can update any field
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Shifts: one record per volunteer per day, with checkIn + checkOut timestamps
+    match /shifts/{shiftId} {
+      allow read: if isSignedIn() && (
+        resource.data.volunteerId == request.auth.uid ||
+        userIsLeaderOf(resource.data.commissionId) ||
+        isAdmin()
+      );
+
+      // Only the leader of the commission (or admin) can create/update a shift
+      allow create: if (userIsLeaderOf(request.resource.data.commissionId) || isAdmin())
+        && request.resource.data.leaderId == request.auth.uid
+        && request.resource.data.checkInAt != null;
+
+      allow update: if (userIsLeaderOf(resource.data.commissionId) || isAdmin())
+        && request.resource.data.volunteerId == resource.data.volunteerId
+        && request.resource.data.commissionId == resource.data.commissionId;
+
+      allow delete: if isAdmin();
+    }
+
+    // Audit log: admin-only
+    match /audit/{entry} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}

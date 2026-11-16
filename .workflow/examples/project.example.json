@@ -1,0 +1,43 @@
+{
+  "kit_version": "0.3.1",
+  "project_name": "Mi aplicación",
+  "project_key": "APP",
+  "owner": "Por definir",
+  "language": "es",
+  "product_locales": [
+    "es"
+  ],
+  "state_backend": "github",
+  "entry_policy": "task_authorization",
+  "integration_policy": "delegated_after_checks",
+  "release_policy": "explicit_authorization",
+  "repositories": [],
+  "environments": {
+    "local": {
+      "purpose": "Desarrollo en la máquina del responsable",
+      "autodeploy": false
+    },
+    "staging": {
+      "purpose": "Prueba integrada antes de producción (si aplica)",
+      "autodeploy": false
+    },
+    "prod": {
+      "purpose": "Entorno de usuarios finales",
+      "autodeploy": false
+    }
+  },
+  "cli_access": {
+    "account": "flores1102angel266@gmail.com",
+    "forbidden_accounts": ["angel.flores@comocom.com"],
+    "required_tools": []
+  },
+  "agents": [],
+  "human_role": "business_owner",
+  "technical_authority": "agent_coordinator",
+  "github": {
+    "organization": null,
+    "project_url": null,
+    "connection_state": "not_connected",
+    "open_issue_status": "single_status_label"
+  }
+}

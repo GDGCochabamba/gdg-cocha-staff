@@ -1,0 +1,13 @@
+{
+  "id": "APP-001",
+  "kind": "simple",
+  "state": "draft",
+  "executor": null,
+  "scope": "task.md",
+  "business": null,
+  "technical": null,
+  "result": null,
+  "qa": null,
+  "authorization_reference": null,
+  "updated_at": null
+}

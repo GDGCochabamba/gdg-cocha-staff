@@ -1,0 +1,45 @@
+{
+  "note": "Completar con acceso real; no inicia agentes ni afirma disponibilidad de modelos.",
+  "entries": [
+    {
+      "tool": "claude",
+      "exact_model": null,
+      "reasoning": null,
+      "role": null,
+      "usage_pool": null,
+      "enabled": false
+    },
+    {
+      "tool": "codex",
+      "exact_model": null,
+      "reasoning": null,
+      "role": null,
+      "usage_pool": null,
+      "enabled": false
+    },
+    {
+      "tool": "gemini",
+      "exact_model": null,
+      "reasoning": null,
+      "role": null,
+      "usage_pool": null,
+      "enabled": false
+    },
+    {
+      "tool": "antigravity",
+      "exact_model": null,
+      "reasoning": null,
+      "role": null,
+      "usage_pool": null,
+      "enabled": false
+    },
+    {
+      "tool": "cursor",
+      "exact_model": null,
+      "reasoning": null,
+      "role": null,
+      "usage_pool": null,
+      "enabled": false
+    }
+  ]
+}
