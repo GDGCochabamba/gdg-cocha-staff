@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
 import { useAuth } from "../auth";
 import { cancelApplication, getUserApplications } from "../lib/applications";
 import { listEvents } from "../lib/events";
@@ -96,9 +97,10 @@ export default function MyApplications() {
                       href={ev.whatsappGroupUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="text-xs text-green-700 hover:underline"
+                      className="inline-flex items-center gap-1 text-xs text-green-700 hover:underline"
                     >
-                      💬 Grupo WhatsApp del staff
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Grupo WhatsApp del staff
                     </a>
                   )}
                   {canCancel && (

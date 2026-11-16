@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowDown, ArrowUp, X } from "lucide-react";
 import type { CustomQuestion, QuestionType } from "../../types";
 import { slugify } from "../../lib/slug";
 
@@ -113,8 +114,12 @@ export default function CustomQuestionsEditor({ value, onChange }: Props) {
               <span>Obligatoria</span>
             </label>
             <div className="flex gap-1">
-              <button type="button" onClick={() => move(q.id, -1)} className="px-2 py-1 text-xs border border-gray-300 rounded">↑</button>
-              <button type="button" onClick={() => move(q.id, 1)} className="px-2 py-1 text-xs border border-gray-300 rounded">↓</button>
+              <button type="button" onClick={() => move(q.id, -1)} className="px-2 py-1 border border-gray-300 rounded" aria-label="Subir">
+                <ArrowUp className="w-3.5 h-3.5" />
+              </button>
+              <button type="button" onClick={() => move(q.id, 1)} className="px-2 py-1 border border-gray-300 rounded" aria-label="Bajar">
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
               <button type="button" onClick={() => remove(q.id)} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded">eliminar</button>
             </div>
           </div>
@@ -139,7 +144,9 @@ export default function CustomQuestionsEditor({ value, onChange }: Props) {
                     placeholder={`Opción ${idx + 1}`}
                     className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
                   />
-                  <button type="button" onClick={() => removeOption(q.id, idx)} className="text-xs text-red-700">✕</button>
+                  <button type="button" onClick={() => removeOption(q.id, idx)} className="text-red-700" aria-label="Eliminar opción">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))}
               <button type="button" onClick={() => addOption(q.id)} className="text-xs text-gBlue">+ Agregar opción</button>

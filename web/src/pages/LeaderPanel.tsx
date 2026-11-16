@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Clock, MessageCircle, Mic } from "lucide-react";
 import { useAuth } from "../auth";
 import { getEventBySlug } from "../lib/events";
 import { getApplication, subscribeApplications } from "../lib/applications";
@@ -96,13 +97,15 @@ export default function LeaderPanel() {
         </p>
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-600">
           {(event.staffStartTime || event.staffEndTime) && (
-            <span>
-              🕐 Staff: {event.staffStartTime || "?"}{event.staffEndTime ? ` – ${event.staffEndTime}` : ""}
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              Staff: {event.staffStartTime || "?"}{event.staffEndTime ? ` – ${event.staffEndTime}` : ""}
             </span>
           )}
           {(event.startTime || event.endTime) && (
-            <span>
-              🎤 Evento: {event.startTime || "?"}{event.endTime ? ` – ${event.endTime}` : ""}
+            <span className="inline-flex items-center gap-1">
+              <Mic className="w-3.5 h-3.5" />
+              Evento: {event.startTime || "?"}{event.endTime ? ` – ${event.endTime}` : ""}
             </span>
           )}
           {event.whatsappGroupUrl && (
@@ -110,9 +113,10 @@ export default function LeaderPanel() {
               href={event.whatsappGroupUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-green-700 hover:underline"
+              className="inline-flex items-center gap-1 text-green-700 hover:underline"
             >
-              💬 Grupo WhatsApp del staff
+              <MessageCircle className="w-3.5 h-3.5" />
+              Grupo WhatsApp del staff
             </a>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { MapPin, MessageCircle } from "lucide-react";
 import { useAuth } from "../auth";
 import { getEventBySlug } from "../lib/events";
 import { getApplication } from "../lib/applications";
@@ -43,7 +44,10 @@ export default function EventDetail() {
           )}
         </p>
         {event.location?.name && (
-          <p className="text-sm text-gray-700 mt-1">📍 {event.location.name}{event.location.address ? ` · ${event.location.address}` : ""}</p>
+          <p className="text-sm text-gray-700 mt-1 inline-flex items-center gap-1">
+            <MapPin className="w-4 h-4" />
+            {event.location.name}{event.location.address ? ` · ${event.location.address}` : ""}
+          </p>
         )}
         {event.tagline && <p className="text-gray-700 mt-2">{event.tagline}</p>}
       </div>
@@ -86,7 +90,8 @@ export default function EventDetail() {
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-2 mt-2 bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700"
               >
-                <span>💬</span> Unirme al grupo de WhatsApp del staff
+                <MessageCircle className="w-4 h-4" />
+                Unirme al grupo de WhatsApp del staff
               </a>
             )}
             <Link

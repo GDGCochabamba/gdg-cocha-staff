@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Loader2, MapPin, Navigation, Search, X } from "lucide-react";
 
 // Fix default marker icons in bundlers
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,7 +13,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Cochabamba metropolitan area bbox approx
 const COCHA_VIEWBOX = "-66.35,-17.25,-65.95,-17.55";
 const COCHABAMBA: [number, number] = [-17.3935, -66.157];
 
@@ -45,23 +45,18 @@ interface Place {
   lon: number;
   display_name: string;
   name?: string;
-  type?: string;
-  class?: string;
 }
 
 async function searchPlaces(query: string): Promise<Place[]> {
   const q = query.trim();
   if (!q) return [];
-
-  // Try: biased to Cochabamba metro, bounded
   const bbox = `viewbox=${COCHA_VIEWBOX}&bounded=1`;
   const base = "https://nominatim.openstreetmap.org/search";
   const url1 = `${base}?format=jsonv2&addressdetails=1&limit=8&countrycodes=bo&${bbox}&q=${encodeURIComponent(q)}`;
 
   const res1 = await fetch(url1, { headers: { "Accept-Language": "es" } });
-  let data: Place[] = res1.ok ? await res1.json() : [];
+  let data: any[] = res1.ok ? await res1.json() : [];
 
-  // Fallback: no bbox, all Bolivia
   if (data.length === 0) {
     const url2 = `${base}?format=jsonv2&addressdetails=1&limit=8&countrycodes=bo&q=${encodeURIComponent(q)}`;
     const res2 = await fetch(url2, { headers: { "Accept-Language": "es" } });
@@ -73,13 +68,10 @@ async function searchPlaces(query: string): Promise<Place[]> {
     lon: parseFloat(d.lon),
     display_name: d.display_name,
     name: d.name || d.display_name.split(",")[0],
-    type: d.type,
-    class: d.class,
   }));
 }
 
-function parseGoogleMapsUrl(input: string): { lat: number; lng: number } | null {
-  // Matches "@-17.3935,-66.157" or "?q=-17.3935,-66.157" or "/-17.3935,-66.157"
+function parseCoords(input: string): { lat: number; lng: number } | null {
   const coord = input.match(/(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/);
   if (coord) {
     const lat = parseFloat(coord[1]);
@@ -98,7 +90,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
   const [searching, setSearching] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
-  const [focused, setFocused] = useState(false);
+  const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,31 +100,40 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setFocused(false);
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
-  // Live search with debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
+
     if (q.length < 3) {
       setResults([]);
+      setSearching(false);
       return;
     }
 
-    // Google Maps URL paste shortcut
-    const coords = parseGoogleMapsUrl(q);
+    const coords = parseCoords(q);
     if (coords) {
       setResults([]);
       handlePick(coords.lat, coords.lng, "Coordenadas pegadas");
+      setOpen(false);
       return;
     }
 
+    setSearching(true);
+    setOpen(true);
     debounceRef.current = setTimeout(async () => {
-      setSearching(true);
       try {
         const data = await searchPlaces(q);
         setResults(data);
@@ -141,7 +142,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
       } finally {
         setSearching(false);
       }
-    }, 300);
+    }, 350);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -156,7 +157,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
 
   function pickResult(r: Place) {
     handlePick(r.lat, r.lon, r.display_name);
-    setFocused(false);
+    setOpen(false);
     setQuery(r.name || r.display_name.split(",")[0]);
   }
 
@@ -185,35 +186,42 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
     );
   }
 
-  const openDropdown = focused && (results.length > 0 || (searching && query.length >= 3));
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (results.length > 0) pickResult(results[0]);
+    }
+  }
 
   return (
     <div className="space-y-2">
       <div ref={boxRef} className="relative">
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔍</div>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setTimeout(() => setFocused(false), 150)}
-              placeholder="Buscar venue, dirección o pega coords de Google Maps"
+              onFocus={() => query.trim().length >= 3 && setOpen(true)}
+              onKeyDown={handleKeyDown}
+              placeholder="Buscar venue o dirección en Cochabamba"
               className="w-full border border-gray-300 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gBlue/40 focus:border-gBlue"
               autoComplete="off"
               spellCheck={false}
             />
             {searching && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs animate-pulse">…</div>
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
             )}
             {query && !searching && (
               <button
                 type="button"
-                onClick={() => { setQuery(""); setResults([]); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-sm w-5 h-5 rounded-full hover:bg-gray-100"
+                onClick={() => { setQuery(""); setResults([]); setOpen(false); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 w-6 h-6 inline-flex items-center justify-center rounded-full hover:bg-gray-100"
+                aria-label="Limpiar"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -221,31 +229,34 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
             type="button"
             onClick={useCurrentLocation}
             disabled={geoBusy}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 whitespace-nowrap disabled:opacity-60"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 whitespace-nowrap disabled:opacity-60 inline-flex items-center gap-1.5"
             title="Usar mi ubicación actual"
           >
-            {geoBusy ? "⏳" : "📍"} Mi ubicación
+            {geoBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+            <span className="hidden sm:inline">Mi ubicación</span>
           </button>
         </div>
 
-        {openDropdown && (
+        {open && query.trim().length >= 3 && (
           <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
-            {searching && results.length === 0 && (
-              <div className="px-3 py-3 text-sm text-gray-500">Buscando "{query}" en Cochabamba…</div>
-            )}
-            {!searching && results.length === 0 && query.length >= 3 && (
-              <div className="px-3 py-3 text-sm text-gray-500">
-                Sin resultados para "{query}". Prueba otro término o clickea directo en el mapa.
+            {searching && (
+              <div className="px-3 py-3 text-sm text-gray-500 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Buscando "{query}"…
               </div>
             )}
-            {results.map((r, i) => (
+            {!searching && results.length === 0 && (
+              <div className="px-3 py-3 text-sm text-gray-500">
+                Sin resultados. Prueba otro término o clickea directo en el mapa.
+              </div>
+            )}
+            {!searching && results.map((r, i) => (
               <button
                 key={i}
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); pickResult(r); }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-0 flex items-start gap-2"
               >
-                <span className="text-gray-400 mt-0.5">📍</span>
+                <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-gray-900 truncate">{r.name}</div>
                   <div className="text-xs text-gray-500 line-clamp-2">{r.display_name}</div>
@@ -280,7 +291,7 @@ export default function MapPicker({ lat, lng, onChange, height = "320px" }: MapP
       </div>
 
       <p className="text-xs text-gray-500">
-        Escribe para buscar en Cochabamba · Click en el mapa para marcar · "Mi ubicación" para usar tu GPS · También acepta coordenadas pegadas ("-17.3935, -66.157").
+        Escribe mínimo 3 letras para buscar · Enter elige el primer resultado · Click en el mapa pone el pin directo · La ubicación no se guarda hasta que pulses el botón <span className="font-medium">Guardar cambios</span> abajo.
       </p>
     </div>
   );

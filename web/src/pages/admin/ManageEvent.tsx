@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ChevronDown, ChevronRight, MapPin, Star } from "lucide-react";
 import { useAuth } from "../../auth";
 import { getEventBySlug, updateEvent } from "../../lib/events";
 import {
@@ -95,7 +96,11 @@ export default function ManageEvent() {
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold">{event.name}</h1>
             <p className="text-sm text-gray-500">{fmtDate(event.dateISO)} · <span className="text-gray-700">{event.commissions.length} comisiones</span></p>
-            {event.location?.name && <p className="text-sm text-gray-500">📍 {event.location.name}</p>}
+            {event.location?.name && (
+              <p className="text-sm text-gray-500 inline-flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5" /> {event.location.name}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -201,7 +206,7 @@ export default function ManageEvent() {
                       <td className="py-2 px-3">
                         <button onClick={() => toggle(a.uid)} className="text-left w-full">
                           <div className="font-medium flex items-center gap-1">
-                            {hasDetails && <span className="text-gray-400 text-xs">{isOpen ? "▼" : "▶"}</span>}
+                            {hasDetails && (isOpen ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />)}
                             {a.displayName}
                           </div>
                           <div className="text-xs text-gray-500">{a.email}</div>
@@ -234,9 +239,10 @@ export default function ManageEvent() {
                         {a.status === "approved" && (
                           <button
                             onClick={() => toggleInitiative(event.id, a.uid, a.initiative)}
-                            className={`text-xs px-2 py-1 rounded ${a.initiative ? "bg-yellow-500 text-white" : "bg-gray-200 text-gray-700"}`}
+                            className={`text-xs px-2 py-1 rounded inline-flex items-center gap-1 ${a.initiative ? "bg-yellow-500 text-white" : "bg-gray-200 text-gray-700"}`}
                           >
-                            {a.initiative ? "★" : "☆"} Iniciativa
+                            <Star className={`w-3.5 h-3.5 ${a.initiative ? "fill-current" : ""}`} />
+                            Iniciativa
                           </button>
                         )}
                       </td>
