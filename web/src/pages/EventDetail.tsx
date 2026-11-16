@@ -67,6 +67,18 @@ export default function EventDetail() {
               <StatusBadge status={application.status} />
               <span className="text-sm text-gray-600">Comisión: {commissionNameOf(event, application.commissionId)}</span>
             </div>
+            {application.status === "approved" && (event.staffStartTime || event.staffEndTime) && (
+              <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                <div className="font-medium text-blue-900">Horario del staff</div>
+                <div className="text-blue-800">
+                  Llegada: <span className="font-medium">{event.staffStartTime || "—"}</span>
+                  {event.staffEndTime && <> · Salida: <span className="font-medium">{event.staffEndTime}</span></>}
+                </div>
+                <p className="text-xs text-blue-700 mt-1">
+                  Los asistentes llegan a las {event.startTime || "?"}; tú llegas antes para preparar.
+                </p>
+              </div>
+            )}
             {application.status === "approved" && event.whatsappGroupUrl && (
               <a
                 href={event.whatsappGroupUrl}

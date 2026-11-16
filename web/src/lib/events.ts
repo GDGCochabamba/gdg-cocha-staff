@@ -37,6 +37,8 @@ export interface CreateEventInput {
   dateISO: string;
   startTime?: string;
   endTime?: string;
+  staffStartTime?: string;
+  staffEndTime?: string;
   tagline?: string;
   description?: string;
   commissions: Commission[];
@@ -66,6 +68,8 @@ export async function createEvent(input: CreateEventInput, createdBy: string): P
     dateISO: input.dateISO,
     startTime: input.startTime ?? "",
     endTime: input.endTime ?? "",
+    staffStartTime: input.staffStartTime ?? "",
+    staffEndTime: input.staffEndTime ?? "",
     tagline: input.tagline?.trim() || "",
     description: input.description?.trim() || "",
     status: input.status ?? "draft",

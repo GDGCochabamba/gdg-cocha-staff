@@ -49,6 +49,8 @@ export interface EventDoc {
   dateISO: string;
   startTime?: string;
   endTime?: string;
+  staffStartTime?: string;
+  staffEndTime?: string;
   tagline?: string;
   description?: string;
   status: EventStatus;

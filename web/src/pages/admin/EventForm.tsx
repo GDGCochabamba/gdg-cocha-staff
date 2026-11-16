@@ -10,6 +10,8 @@ export interface EventFormValues {
   dateISO: string;
   startTime: string;
   endTime: string;
+  staffStartTime: string;
+  staffEndTime: string;
   tagline: string;
   description: string;
   locationName: string;
@@ -137,22 +139,43 @@ export default function EventForm({ initial, onSubmit, submitting, error, submit
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Hora de inicio</label>
+          <label className="block text-sm font-medium mb-1">Inicio del evento</label>
           <input
             type="time"
             value={v.startTime}
             onChange={(e) => setV({ ...v, startTime: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2"
           />
+          <p className="text-xs text-gray-500 mt-1">Hora pública para los asistentes.</p>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Hora de cierre</label>
+          <label className="block text-sm font-medium mb-1">Cierre del evento</label>
           <input
             type="time"
             value={v.endTime}
             onChange={(e) => setV({ ...v, endTime: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Llegada del staff</label>
+          <input
+            type="time"
+            value={v.staffStartTime}
+            onChange={(e) => setV({ ...v, staffStartTime: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          />
+          <p className="text-xs text-gray-500 mt-1">A qué hora llegan los voluntarios (usualmente antes del evento).</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Salida del staff</label>
+          <input
+            type="time"
+            value={v.staffEndTime}
+            onChange={(e) => setV({ ...v, staffEndTime: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          />
+          <p className="text-xs text-gray-500 mt-1">Hasta cuándo se quedan (usualmente después del cierre, para desarmado).</p>
         </div>
       </div>
 

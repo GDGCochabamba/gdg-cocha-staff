@@ -94,16 +94,28 @@ export default function LeaderPanel() {
         <p className="text-sm text-gray-500">
           {event.name} · Comisión: <span className="text-gray-800 font-medium">{commission?.name ?? myApp.commissionId}</span>
         </p>
-        {event.whatsappGroupUrl && (
-          <a
-            href={event.whatsappGroupUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="inline-flex items-center gap-1 mt-2 text-xs text-green-700 hover:underline"
-          >
-            💬 Grupo WhatsApp del staff
-          </a>
-        )}
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-600">
+          {(event.staffStartTime || event.staffEndTime) && (
+            <span>
+              🕐 Staff: {event.staffStartTime || "?"}{event.staffEndTime ? ` – ${event.staffEndTime}` : ""}
+            </span>
+          )}
+          {(event.startTime || event.endTime) && (
+            <span>
+              🎤 Evento: {event.startTime || "?"}{event.endTime ? ` – ${event.endTime}` : ""}
+            </span>
+          )}
+          {event.whatsappGroupUrl && (
+            <a
+              href={event.whatsappGroupUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-green-700 hover:underline"
+            >
+              💬 Grupo WhatsApp del staff
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
