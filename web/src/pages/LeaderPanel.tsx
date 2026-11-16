@@ -1,135 +1,123 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  addDoc,
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  doc,
-  where,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { commissionName } from "../config/commissions";
-import type { ShiftDoc, UserDoc } from "../types";
+import { getEventBySlug } from "../lib/events";
+import { getApplication, subscribeApplications } from "../lib/applications";
+import { checkIn, checkOut, subscribeShifts } from "../lib/shifts";
+import type { ApplicationDoc, EventDoc, ShiftDoc } from "../types";
 
-export default function Leader() {
+export default function LeaderPanel() {
+  const { slug = "" } = useParams();
   const { user, profile } = useAuth();
-  const [volunteers, setVolunteers] = useState<UserDoc[]>([]);
+  const [event, setEvent] = useState<EventDoc | null>(null);
+  const [myApp, setMyApp] = useState<ApplicationDoc | null>(null);
+  const [apps, setApps] = useState<ApplicationDoc[]>([]);
   const [shifts, setShifts] = useState<ShiftDoc[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const commissionId = profile?.commissionId ?? "";
+  useEffect(() => {
+    (async () => {
+      const ev = await getEventBySlug(slug);
+      setEvent(ev);
+      if (ev && user) {
+        const a = await getApplication(ev.id, user.uid);
+        setMyApp(a);
+      }
+    })();
+  }, [slug, user]);
 
   useEffect(() => {
-    if (!commissionId) return;
-    const qUsers = query(
-      collection(db, "users"),
-      where("commissionId", "==", commissionId),
-      where("status", "==", "approved"),
-    );
-    const u1 = onSnapshot(qUsers, (snap) =>
-      setVolunteers(snap.docs.map((d) => d.data() as UserDoc)),
-    );
-    const qShifts = query(
-      collection(db, "shifts"),
-      where("commissionId", "==", commissionId),
-      orderBy("checkInAt", "desc"),
-    );
-    const u2 = onSnapshot(qShifts, (snap) =>
-      setShifts(snap.docs.map((d) => ({ id: d.id, ...(d.data() as ShiftDoc) }))),
-    );
-    return () => {
-      u1();
-      u2();
-    };
-  }, [commissionId]);
+    if (!event || !myApp) return;
+    const u1 = subscribeApplications(event.id, setApps);
+    const u2 = subscribeShifts(event.id, myApp.commissionId, setShifts);
+    return () => { u1(); u2(); };
+  }, [event, myApp]);
 
-  const openShiftByVolunteer = useMemo(() => {
+  const volunteers = useMemo(
+    () =>
+      apps.filter(
+        (a) => a.status === "approved" && myApp && a.commissionId === myApp.commissionId,
+      ),
+    [apps, myApp],
+  );
+
+  const openShiftByVol = useMemo(() => {
     const m = new Map<string, ShiftDoc>();
-    for (const s of shifts) {
-      if (!s.checkOutAt && !m.has(s.volunteerId)) m.set(s.volunteerId, s);
-    }
+    for (const s of shifts) if (!s.checkOutAt && !m.has(s.volunteerId)) m.set(s.volunteerId, s);
     return m;
   }, [shifts]);
 
-  const completedByVolunteer = useMemo(() => {
+  const completedByVol = useMemo(() => {
     const m = new Map<string, number>();
-    for (const s of shifts) {
-      if (s.checkInAt && s.checkOutAt) {
-        m.set(s.volunteerId, (m.get(s.volunteerId) ?? 0) + 1);
-      }
-    }
+    for (const s of shifts) if (s.checkInAt && s.checkOutAt) m.set(s.volunteerId, (m.get(s.volunteerId) ?? 0) + 1);
     return m;
   }, [shifts]);
 
-  async function checkIn(v: UserDoc) {
-    if (!user || !profile) return;
+  if (!event) return <div className="text-gray-500">Cargando…</div>;
+  if (!user || !myApp || myApp.role !== "leader") {
+    return <div className="text-red-700">No eres líder en este evento.</div>;
+  }
+
+  const commission = event.commissions.find((c) => c.id === myApp.commissionId);
+
+  async function handleCheckIn(v: ApplicationDoc) {
+    if (!user || !profile || !event || !myApp) return;
     setBusy(v.uid);
     try {
-      await addDoc(collection(db, "shifts"), {
+      await checkIn(event.id, {
         volunteerId: v.uid,
         volunteerName: v.displayName,
-        commissionId,
+        commissionId: myApp.commissionId,
         leaderId: user.uid,
-        leaderName: profile.displayName,
-        checkInAt: serverTimestamp(),
+        leaderName: profile.displayName ?? user.email ?? "Líder",
       });
     } finally {
       setBusy(null);
     }
   }
 
-  async function checkOut(shift: ShiftDoc) {
-    if (!shift.id) return;
+  async function handleCheckOut(shift: ShiftDoc) {
+    if (!event || !shift.id) return;
     setBusy(shift.volunteerId);
     try {
-      await updateDoc(doc(db, "shifts", shift.id), {
-        checkOutAt: serverTimestamp(),
-      });
+      await checkOut(event.id, shift.id);
     } finally {
       setBusy(null);
     }
   }
-
-  if (!profile) return null;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Panel de líder</h1>
+        <Link to="/mis-postulaciones" className="text-sm text-gray-500 hover:text-black">← Mis postulaciones</Link>
+        <h1 className="text-xl sm:text-2xl font-semibold mt-2">Panel líder</h1>
         <p className="text-sm text-gray-500">
-          Comisión: <span className="font-medium">{commissionName(commissionId)}</span> · {volunteers.length} voluntarios aprobados
+          {event.name} · Comisión: <span className="text-gray-800 font-medium">{commission?.name ?? myApp.commissionId}</span>
         </p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
         {volunteers.length === 0 && (
-          <div className="p-6 text-center text-gray-500">
-            Aún no tienes voluntarios aprobados en tu comisión.
-          </div>
+          <div className="p-6 text-center text-gray-500">Aún no hay voluntarios aprobados.</div>
         )}
         {volunteers.map((v) => {
-          const open = openShiftByVolunteer.get(v.uid);
-          const completed = completedByVolunteer.get(v.uid) ?? 0;
+          const open = openShiftByVol.get(v.uid);
+          const completed = completedByVol.get(v.uid) ?? 0;
           const isBusy = busy === v.uid;
           return (
-            <div key={v.uid} className="p-4 flex items-center justify-between gap-3">
-              <div>
-                <div className="font-medium">{v.displayName}</div>
-                <div className="text-xs text-gray-500">{v.email}</div>
+            <div key={v.uid} className="p-3 sm:p-4 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate">{v.displayName}</div>
+                <div className="text-xs text-gray-500 truncate">{v.email}</div>
                 <div className="text-xs text-gray-500">
-                  Turnos completos: {completed}
-                  {open && <span className="ml-2 text-blue-700">· en turno</span>}
+                  Turnos: {completed}{open && <span className="text-blue-700 ml-2">· en turno</span>}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div>
                 {!open ? (
                   <button
                     disabled={isBusy}
-                    onClick={() => checkIn(v)}
+                    onClick={() => handleCheckIn(v)}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm disabled:opacity-60"
                   >
                     Entrada
@@ -137,7 +125,7 @@ export default function Leader() {
                 ) : (
                   <button
                     disabled={isBusy}
-                    onClick={() => checkOut(open)}
+                    onClick={() => handleCheckOut(open)}
                     className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm disabled:opacity-60"
                   >
                     Salida
@@ -177,11 +165,7 @@ export default function Leader() {
                 </tr>
               ))}
               {shifts.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-4 px-3 text-center text-gray-500">
-                    Aún no hay turnos registrados.
-                  </td>
-                </tr>
+                <tr><td colSpan={4} className="py-4 px-3 text-center text-gray-500">Sin turnos todavía.</td></tr>
               )}
             </tbody>
           </table>

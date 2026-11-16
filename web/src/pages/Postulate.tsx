@@ -1,27 +1,36 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { COMMISSIONS } from "../config/commissions";
-import type { UserDoc } from "../types";
+import { getEventBySlug } from "../lib/events";
+import { createApplication, getApplication } from "../lib/applications";
+import type { EventDoc } from "../types";
 
 const CLAUSE =
-  'Entiendo que mi participación como Staff es fundamental para el DevFest. Si soy aceptado y falto a mi turno sin dar aviso con al menos 48 horas de anticipación, perderé la oportunidad de ser staff en futuros eventos del GDG Cochabamba y mi perfil será marcado en la base de datos de la comunidad.';
+  'Entiendo que mi participación como Staff es fundamental para el evento. Si soy aceptado y falto a mi turno sin dar aviso con al menos 48 horas de anticipación, perderé la oportunidad de ser staff en futuros eventos del GDG Cochabamba y mi perfil será marcado en la base de datos de la comunidad.';
 
 export default function Postulate() {
-  const { user, profile } = useAuth();
+  const { slug = "" } = useParams();
+  const { user } = useAuth();
   const nav = useNavigate();
-  const [commissionId, setCommissionId] = useState("");
+  const [event, setEvent] = useState<EventDoc | null>(null);
+  const [existing, setExisting] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [commissionId, setCommissionId] = useState("");
   const [phone, setPhone] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile) nav("/mi-estado", { replace: true });
-  }, [profile, nav]);
+    (async () => {
+      const ev = await getEventBySlug(slug);
+      setEvent(ev);
+      if (ev && user) {
+        const app = await getApplication(ev.id, user.uid);
+        if (app) setExisting(true);
+      }
+    })();
+  }, [slug, user]);
 
   useEffect(() => {
     if (user?.displayName && !fullName) setFullName(user.displayName);
@@ -29,14 +38,10 @@ export default function Postulate() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !event) return;
     const name = fullName.trim();
-    if (!name) {
-      setError("Dinos cómo te llamas");
-      return;
-    }
-    if (name.length < 3) {
-      setError("El nombre debe tener al menos 3 caracteres");
+    if (!name || name.length < 3) {
+      setError("Dinos cómo te llamas (mínimo 3 caracteres)");
       return;
     }
     if (!commissionId) {
@@ -50,45 +55,48 @@ export default function Postulate() {
     setError(null);
     setSaving(true);
     try {
-      const data: Partial<UserDoc> = {
+      await createApplication({
+        eventId: event.id,
         uid: user.uid,
         email: user.email ?? "",
         displayName: name,
         photoURL: user.photoURL ?? "",
         phone: phone.trim(),
         commissionId,
-        role: "volunteer",
-        status: "pending",
-        tier: "none",
-      };
-      await setDoc(doc(db, "users", user.uid), {
-        ...data,
-        acceptedClauseAt: serverTimestamp(),
-        appliedAt: serverTimestamp(),
       });
-      nav("/mi-estado");
-    } catch (err) {
+      nav(`/mis-postulaciones`);
+    } catch (err: any) {
       console.error(err);
-      setError("No pudimos guardar tu postulación. Revisa tu conexión e intenta de nuevo.");
+      setError(err?.message || "No pudimos guardar tu postulación.");
     } finally {
       setSaving(false);
     }
   }
 
-  if (!user) return null;
+  if (!user) return <div className="text-gray-500">Debes iniciar sesión.</div>;
+  if (!event) return <div className="text-gray-500">Cargando evento…</div>;
+  if (event.status !== "open") return <div className="text-gray-500">Postulaciones cerradas para este evento.</div>;
+  if (existing) {
+    return (
+      <div className="max-w-xl mx-auto bg-white border rounded-xl p-6 text-center space-y-3">
+        <p className="text-gray-700">Ya tienes una postulación para este evento.</p>
+        <button onClick={() => nav("/mis-postulaciones")} className="px-5 py-2 bg-gBlue text-white rounded-lg">
+          Ver mis postulaciones
+        </button>
+      </div>
+    );
+  }
 
-  const commission = COMMISSIONS.find((c) => c.id === commissionId);
+  const selected = event.commissions.find((c) => c.id === commissionId);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Postulación de Staff</h1>
-        <p className="text-sm text-gray-500">
-          Sesión: <span className="font-medium">{user.email}</span>
-        </p>
+        <h1 className="text-xl sm:text-2xl font-semibold">Postular a {event.name}</h1>
+        <p className="text-xs sm:text-sm text-gray-500 break-all">Sesión: {user.email}</p>
       </div>
 
-      <form onSubmit={submit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+      <form onSubmit={submit} className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 space-y-5">
         <div>
           <label className="block text-sm font-medium mb-1">
             Nombre completo <span className="text-red-500">*</span>
@@ -103,12 +111,12 @@ export default function Postulate() {
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            Como te conocen. Es el nombre que verán los organizadores y aparecerá en tu certificado si llegas a Tier 1.
+            Como te conocen. Aparecerá en tu certificado si llegas a Tier 1.
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Comisión a la que postulas</label>
+          <label className="block text-sm font-medium mb-1">Comisión</label>
           <select
             value={commissionId}
             onChange={(e) => setCommissionId(e.target.value)}
@@ -116,16 +124,14 @@ export default function Postulate() {
             required
           >
             <option value="">— Elige una comisión —</option>
-            {COMMISSIONS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+            {event.commissions.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          {commission && (
+          {selected && (
             <div className="mt-3 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
-              <p><span className="font-medium">Rol:</span> {commission.roles}</p>
-              <p><span className="font-medium">Horario:</span> {commission.schedule}</p>
+              <p><span className="font-medium">Rol:</span> {selected.roles}</p>
+              <p><span className="font-medium">Horario:</span> {selected.schedule}</p>
             </div>
           )}
         </div>

@@ -9,6 +9,7 @@ interface AuthState {
   user: User | null;
   profile: UserDoc | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: () => Promise<void>;
   signOutUser: () => Promise<void>;
 }
@@ -37,22 +38,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       const snap = await getDoc(ref);
-      if (!snap.exists() && isAdminEmail(user.email)) {
+      if (!snap.exists()) {
         await setDoc(ref, {
           uid: user.uid,
-          email: user.email,
-          displayName: user.displayName ?? user.email ?? "Admin",
+          email: user.email ?? "",
+          displayName: user.displayName ?? user.email ?? "Usuario",
           photoURL: user.photoURL ?? "",
-          commissionId: "logistica",
-          role: "admin",
-          status: "approved",
-          tier: "none",
-          appliedAt: serverTimestamp(),
-          approvedAt: serverTimestamp(),
-          acceptedClauseAt: serverTimestamp(),
+          isGlobalAdmin: isAdminEmail(user.email),
+          createdAt: serverTimestamp(),
         });
+      } else {
+        const data = snap.data() as UserDoc;
+        if (isAdminEmail(user.email) && !data.isGlobalAdmin) {
+          await setDoc(ref, { ...data, isGlobalAdmin: true, updatedAt: serverTimestamp() }, { merge: true });
+        }
       }
-    })().catch(() => {});
+    })().catch((err) => console.error("profile bootstrap", err));
 
     return onSnapshot(
       ref,
@@ -72,8 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   }
 
+  const isAdmin = !!(profile?.isGlobalAdmin || isAdminEmail(user?.email));
+
   return (
-    <Ctx.Provider value={{ user, profile, loading, signIn, signOutUser }}>
+    <Ctx.Provider value={{ user, profile, loading, isAdmin, signIn, signOutUser }}>
       {children}
     </Ctx.Provider>
   );

@@ -1,55 +1,76 @@
-import { Link, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth";
-import { EVENT } from "../config/event";
+import { BRAND } from "../config/brand";
+import { listEvents } from "../lib/events";
+import type { EventDoc } from "../types";
+import EventCard from "../components/EventCard";
 
 export default function Home() {
-  const { user, profile, loading, signIn } = useAuth();
+  const { user, signIn, loading } = useAuth();
+  const [events, setEvents] = useState<EventDoc[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  if (loading) return <div className="text-gray-500">Cargando…</div>;
+  useEffect(() => {
+    listEvents().then((all) => {
+      setEvents(all.filter((e) => e.status === "open" || e.status === "closed" || e.status === "past"));
+      setLoadingEvents(false);
+    });
+  }, []);
 
-  if (user && profile) {
-    if (profile.role === "admin") return <Navigate to="/admin" replace />;
-    if (profile.role === "leader") return <Navigate to="/lider" replace />;
-    return <Navigate to="/mi-estado" replace />;
-  }
+  const openEvents = events.filter((e) => e.status === "open");
+  const closedOrPast = events.filter((e) => e.status !== "open");
 
   return (
-    <div className="max-w-2xl mx-auto py-10 text-center space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">
+    <div className="space-y-8">
+      <section className="text-center space-y-3 py-6 sm:py-10">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
           <span className="text-gBlue">{"{"}</span>
-          {" "}DevFest{" "}
+          {" "}{BRAND.name}{" "}
           <span className="text-gBlue">{"}"}</span>
         </h1>
-        <p className="text-lg text-gray-600">Cochabamba 2026 · {EVENT.dateLabel}</p>
-        <p className="text-sm text-gray-500">{EVENT.tagline}</p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 text-left">
-        <h2 className="text-xl font-semibold">Postulación de Staff</h2>
-        <p className="text-gray-700 text-sm">
-          Gracias por querer ser parte del equipo que hace posible el DevFest Cochabamba.
-          Postúlate a una comisión; el equipo organizador revisará tu solicitud.
-        </p>
-        <p className="text-xs text-gray-500">
-          Para postular necesitas iniciar sesión con tu cuenta de Google.
-        </p>
-        {user ? (
-          <Link
-            to="/postular"
-            className="inline-block w-full text-center py-3 bg-gBlue text-white rounded-lg font-medium hover:brightness-110"
-          >
-            Postular ahora
-          </Link>
-        ) : (
+        <p className="text-base sm:text-lg text-gray-600">{BRAND.tagline}</p>
+        {!user && !loading && (
           <button
             onClick={signIn}
-            className="w-full py-3 bg-gBlue text-white rounded-lg font-medium hover:brightness-110"
+            className="mt-4 w-full sm:w-auto px-6 py-3 bg-gBlue text-white rounded-lg font-medium hover:brightness-110"
           >
             Iniciar sesión con Google
           </button>
         )}
-      </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl sm:text-2xl font-semibold mb-3">Eventos abiertos</h2>
+        {loadingEvents ? (
+          <div className="text-gray-500">Cargando eventos…</div>
+        ) : openEvents.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+            No hay eventos con postulaciones abiertas ahora mismo. Vuelve pronto.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {openEvents.map((e) => (
+              <EventCard
+                key={e.id}
+                event={e}
+                href={`/eventos/${e.slug}`}
+                actionLabel={user ? "Postular →" : "Ver detalles →"}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {closedOrPast.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold mb-3 text-gray-700">Otros eventos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {closedOrPast.map((e) => (
+              <EventCard key={e.id} event={e} href={`/eventos/${e.slug}`} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

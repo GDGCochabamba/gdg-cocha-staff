@@ -7,93 +7,117 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isLeader() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
+    function isGlobalAdmin() {
+      return isSignedIn() && userDoc().isGlobalAdmin == true;
     }
 
     function isSelf(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    function userIsLeaderOf(commissionId) {
-      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return u.role == 'leader' && u.commissionId == commissionId;
+    function isEventLeader(eventId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/events/$(eventId)/applications/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/events/$(eventId)/applications/$(request.auth.uid)).data.role == 'leader';
     }
 
-    // Public: event metadata, commissions config
+    function leaderCommission(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)/applications/$(request.auth.uid)).data.commissionId;
+    }
+
+    // Public meta: event config, catalog
     match /meta/{doc} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isGlobalAdmin();
     }
 
-    // Users: one per signed-in Google account
+    // Users: identity only
     match /users/{uid} {
-      // Any signed-in user can read any user's public fields (needed for leader to see their commission list)
       allow read: if isSignedIn();
 
-      // Create own doc: either a normal volunteer postulation, or an admin bootstrap
-      // for one of the hardcoded admin emails.
       allow create: if isSelf(uid)
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
         && (
-          (
-            request.resource.data.role == 'volunteer'
-            && request.resource.data.status == 'pending'
-            && request.resource.data.acceptedClauseAt != null
-          )
-          ||
-          (
-            request.resource.data.role == 'admin'
-            && request.resource.data.status == 'approved'
-            && request.auth.token.email in ['flores1102angel266@gmail.com']
-          )
+          request.resource.data.isGlobalAdmin == false
+          || request.auth.token.email in ['flores1102angel266@gmail.com']
         );
 
-      // Self can update only their own clause acceptance, displayName, cancellation request
       allow update: if isSelf(uid)
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.tier == resource.data.tier
-        && request.resource.data.status in ['pending', 'cancelled']
-        && (resource.data.status == 'pending' || resource.data.status == 'approved');
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.isGlobalAdmin == resource.data.isGlobalAdmin;
 
-      // Admin can update any field
-      allow update: if isAdmin();
-
-      allow delete: if isAdmin();
+      allow update: if isGlobalAdmin();
+      allow delete: if isGlobalAdmin();
     }
 
-    // Shifts: one record per volunteer per day, with checkIn + checkOut timestamps
-    match /shifts/{shiftId} {
-      allow read: if isSignedIn() && (
-        resource.data.volunteerId == request.auth.uid ||
-        userIsLeaderOf(resource.data.commissionId) ||
-        isAdmin()
-      );
+    // Events: public read, admin write
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isGlobalAdmin();
 
-      // Only the leader of the commission (or admin) can create/update a shift
-      allow create: if (userIsLeaderOf(request.resource.data.commissionId) || isAdmin())
-        && request.resource.data.leaderId == request.auth.uid
-        && request.resource.data.checkInAt != null;
+      // Applications: one per (event, user)
+      match /applications/{uid} {
+        allow read: if isSignedIn() && (
+          isSelf(uid) ||
+          isGlobalAdmin() ||
+          isEventLeader(eventId)
+        );
 
-      allow update: if (userIsLeaderOf(resource.data.commissionId) || isAdmin())
-        && request.resource.data.volunteerId == resource.data.volunteerId
-        && request.resource.data.commissionId == resource.data.commissionId;
+        // Create own application: must be self, role 'volunteer', status 'pending'
+        allow create: if isSelf(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.eventId == eventId
+          && request.resource.data.role == 'volunteer'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.tier == 'none'
+          && request.resource.data.acceptedClauseAt != null;
 
-      allow delete: if isAdmin();
-    }
+        // Self can cancel or update own clause acceptance
+        allow update: if isSelf(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.eventId == eventId
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.tier == resource.data.tier
+          && request.resource.data.status in ['pending', 'cancelled']
+          && (resource.data.status == 'pending' || resource.data.status == 'approved');
 
-    // Audit log: admin-only
-    match /audit/{entry} {
-      allow read: if isAdmin();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
+        allow update: if isGlobalAdmin();
+        allow delete: if isGlobalAdmin();
+      }
+
+      // Shifts: leader of commission or admin writes; volunteer reads own
+      match /shifts/{shiftId} {
+        allow read: if isSignedIn() && (
+          resource.data.volunteerId == request.auth.uid ||
+          isGlobalAdmin() ||
+          (isEventLeader(eventId) && leaderCommission(eventId) == resource.data.commissionId)
+        );
+
+        allow create: if (
+          isGlobalAdmin() ||
+          (isEventLeader(eventId) && leaderCommission(eventId) == request.resource.data.commissionId)
+        )
+          && request.resource.data.eventId == eventId
+          && request.resource.data.leaderId == request.auth.uid
+          && request.resource.data.checkInAt != null;
+
+        allow update: if (
+          isGlobalAdmin() ||
+          (isEventLeader(eventId) && leaderCommission(eventId) == resource.data.commissionId)
+        )
+          && request.resource.data.eventId == resource.data.eventId
+          && request.resource.data.volunteerId == resource.data.volunteerId
+          && request.resource.data.commissionId == resource.data.commissionId;
+
+        allow delete: if isGlobalAdmin();
+      }
     }
   }
 }

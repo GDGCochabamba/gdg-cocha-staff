@@ -1,8 +1,9 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type Role = "volunteer" | "leader" | "admin";
-export type Status = "pending" | "approved" | "rejected" | "cancelled";
+export type ApplicationStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type Tier = "none" | "T1" | "T2" | "T3";
+export type EventStatus = "draft" | "open" | "closed" | "past";
+export type ApplicationRole = "volunteer" | "leader";
 
 export interface UserDoc {
   uid: string;
@@ -10,9 +11,43 @@ export interface UserDoc {
   displayName: string;
   photoURL?: string;
   phone?: string;
+  isGlobalAdmin: boolean;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export interface Commission {
+  id: string;
+  name: string;
+  roles: string;
+  schedule: string;
+}
+
+export interface EventDoc {
+  id: string;
+  slug: string;
+  name: string;
+  dateISO: string;
+  tagline?: string;
+  description?: string;
+  status: EventStatus;
+  commissions: Commission[];
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt?: Timestamp;
+  cancelCutoffHours?: number;
+}
+
+export interface ApplicationDoc {
+  uid: string;
+  eventId: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  phone?: string;
   commissionId: string;
-  role: Role;
-  status: Status;
+  role: ApplicationRole;
+  status: ApplicationStatus;
   tier: Tier;
   initiative?: boolean;
   acceptedClauseAt: Timestamp;
@@ -25,6 +60,7 @@ export interface UserDoc {
 
 export interface ShiftDoc {
   id?: string;
+  eventId: string;
   volunteerId: string;
   volunteerName: string;
   commissionId: string;
@@ -34,9 +70,9 @@ export interface ShiftDoc {
   checkOutAt?: Timestamp;
 }
 
-export interface Commission {
+export interface CatalogEntry {
   id: string;
   name: string;
-  roles: string;
-  schedule: string;
+  defaultRoles: string;
+  defaultSchedule: string;
 }
