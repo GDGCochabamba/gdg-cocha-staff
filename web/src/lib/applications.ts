@@ -29,8 +29,14 @@ export interface CreateApplicationInput {
   email: string;
   displayName: string;
   photoURL?: string;
-  phone?: string;
+  phone: string;
+  contactEmail?: string;
   commissionId: string;
+  secondaryInterests?: string[];
+  hasPriorExperience: boolean;
+  availability: "full" | "partial" | "none";
+  skills?: string;
+  motivation?: string;
 }
 
 export async function createApplication(input: CreateApplicationInput): Promise<void> {
@@ -40,8 +46,14 @@ export async function createApplication(input: CreateApplicationInput): Promise<
     email: input.email,
     displayName: input.displayName,
     photoURL: input.photoURL ?? "",
-    phone: input.phone ?? "",
+    phone: input.phone,
+    contactEmail: input.contactEmail ?? "",
     commissionId: input.commissionId,
+    secondaryInterests: input.secondaryInterests ?? [],
+    hasPriorExperience: input.hasPriorExperience,
+    availability: input.availability,
+    skills: input.skills ?? "",
+    motivation: input.motivation ?? "",
     role: "volunteer",
     status: "pending",
     tier: "none",

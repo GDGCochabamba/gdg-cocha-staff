@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../auth";
 import { getEventBySlug, updateEvent } from "../../lib/events";
@@ -25,6 +25,16 @@ export default function ManageEvent() {
   const [shifts, setShifts] = useState<ShiftDoc[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  function toggle(uid: string) {
+    setExpanded((s) => {
+      const next = new Set(s);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
+      return next;
+    });
+  }
 
   useEffect(() => {
     (async () => {
@@ -182,47 +192,94 @@ export default function ManageEvent() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((a) => (
-                <tr key={a.uid} className="border-b border-gray-100 align-top">
-                  <td className="py-2 px-3">
-                    <div className="font-medium">{a.displayName}</div>
-                    <div className="text-xs text-gray-500">{a.email}</div>
-                    {a.phone && <div className="text-xs text-gray-500">{a.phone}</div>}
-                  </td>
-                  <td className="py-2 px-3">{event.commissions.find((c) => c.id === a.commissionId)?.name ?? a.commissionId}</td>
-                  <td className="py-2 px-3"><StatusBadge status={a.status} /></td>
-                  <td className="py-2 px-3">
-                    <TierBadge tier={a.tier} />
-                    {a.role === "leader" && (
-                      <div className="mt-1">
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">Líder</span>
-                      </div>
+              {filtered.map((a) => {
+                const isOpen = expanded.has(a.uid);
+                const hasDetails = a.skills || a.motivation || a.secondaryInterests?.length || a.availability || a.hasPriorExperience !== undefined;
+                return (
+                  <Fragment key={a.uid}>
+                    <tr className="border-b border-gray-100 align-top">
+                      <td className="py-2 px-3">
+                        <button onClick={() => toggle(a.uid)} className="text-left w-full">
+                          <div className="font-medium flex items-center gap-1">
+                            {hasDetails && <span className="text-gray-400 text-xs">{isOpen ? "▼" : "▶"}</span>}
+                            {a.displayName}
+                          </div>
+                          <div className="text-xs text-gray-500">{a.email}</div>
+                          {a.phone && <div className="text-xs text-gray-500">{a.phone}</div>}
+                        </button>
+                      </td>
+                      <td className="py-2 px-3">{event.commissions.find((c) => c.id === a.commissionId)?.name ?? a.commissionId}</td>
+                      <td className="py-2 px-3"><StatusBadge status={a.status} /></td>
+                      <td className="py-2 px-3">
+                        <TierBadge tier={a.tier} />
+                        {a.role === "leader" && (
+                          <div className="mt-1">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">Líder</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-right space-x-1 whitespace-nowrap">
+                        {a.status === "pending" && (
+                          <>
+                            <button onClick={() => approveApplication(event.id, a.uid)} className="text-xs px-2 py-1 bg-green-600 text-white rounded">Aprobar</button>
+                            <button onClick={() => rejectApplication(event.id, a.uid)} className="text-xs px-2 py-1 bg-red-600 text-white rounded">Rechazar</button>
+                          </>
+                        )}
+                        {a.status === "approved" && a.role !== "leader" && (
+                          <button onClick={() => promoteToLeader(event.id, a.uid)} className="text-xs px-2 py-1 bg-purple-600 text-white rounded">Hacer líder</button>
+                        )}
+                        {a.role === "leader" && (
+                          <button onClick={() => demoteFromLeader(event.id, a.uid)} className="text-xs px-2 py-1 bg-gray-500 text-white rounded">Quitar líder</button>
+                        )}
+                        {a.status === "approved" && (
+                          <button
+                            onClick={() => toggleInitiative(event.id, a.uid, a.initiative)}
+                            className={`text-xs px-2 py-1 rounded ${a.initiative ? "bg-yellow-500 text-white" : "bg-gray-200 text-gray-700"}`}
+                          >
+                            {a.initiative ? "★" : "☆"} Iniciativa
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <td colSpan={5} className="py-3 px-3 text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {a.contactEmail && a.contactEmail !== a.email && (
+                              <Info k="Correo contacto" v={a.contactEmail} />
+                            )}
+                            {a.availability && (
+                              <Info k="Disponibilidad" v={
+                                a.availability === "full" ? "Todo el día" :
+                                a.availability === "partial" ? "Parcial" : "Solo momentos puntuales"
+                              } />
+                            )}
+                            {a.hasPriorExperience !== undefined && (
+                              <Info k="Experiencia previa" v={a.hasPriorExperience ? "Sí" : "No"} />
+                            )}
+                            {a.secondaryInterests && a.secondaryInterests.length > 0 && (
+                              <Info k="Otras áreas" v={a.secondaryInterests.map((id) => event.commissions.find((c) => c.id === id)?.name ?? id).join(" · ")} />
+                            )}
+                          </div>
+                          {a.skills && (
+                            <div className="mt-2">
+                              <div className="text-gray-500">Habilidad / herramienta:</div>
+                              <div className="text-gray-800 whitespace-pre-line">{a.skills}</div>
+                            </div>
+                          )}
+                          {a.motivation && (
+                            <div className="mt-2">
+                              <div className="text-gray-500">Motivación:</div>
+                              <div className="text-gray-800 whitespace-pre-line">{a.motivation}</div>
+                            </div>
+                          )}
+                          {!hasDetails && <div className="text-gray-500">Sin detalles adicionales.</div>}
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                  <td className="py-2 px-3 text-right space-x-1 whitespace-nowrap">
-                    {a.status === "pending" && (
-                      <>
-                        <button onClick={() => approveApplication(event.id, a.uid)} className="text-xs px-2 py-1 bg-green-600 text-white rounded">Aprobar</button>
-                        <button onClick={() => rejectApplication(event.id, a.uid)} className="text-xs px-2 py-1 bg-red-600 text-white rounded">Rechazar</button>
-                      </>
-                    )}
-                    {a.status === "approved" && a.role !== "leader" && (
-                      <button onClick={() => promoteToLeader(event.id, a.uid)} className="text-xs px-2 py-1 bg-purple-600 text-white rounded">Hacer líder</button>
-                    )}
-                    {a.role === "leader" && (
-                      <button onClick={() => demoteFromLeader(event.id, a.uid)} className="text-xs px-2 py-1 bg-gray-500 text-white rounded">Quitar líder</button>
-                    )}
-                    {a.status === "approved" && (
-                      <button
-                        onClick={() => toggleInitiative(event.id, a.uid, a.initiative)}
-                        className={`text-xs px-2 py-1 rounded ${a.initiative ? "bg-yellow-500 text-white" : "bg-gray-200 text-gray-700"}`}
-                      >
-                        {a.initiative ? "★" : "☆"} Iniciativa
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                  </Fragment>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-gray-500">Sin postulaciones.</td>
@@ -232,6 +289,15 @@ export default function ManageEvent() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Info({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <div className="text-gray-500">{k}</div>
+      <div className="text-gray-800 font-medium">{v}</div>
     </div>
   );
 }

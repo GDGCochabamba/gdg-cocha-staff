@@ -4,6 +4,7 @@ export type ApplicationStatus = "pending" | "approved" | "rejected" | "cancelled
 export type Tier = "none" | "T1" | "T2" | "T3";
 export type EventStatus = "draft" | "open" | "closed" | "past";
 export type ApplicationRole = "volunteer" | "leader";
+export type Availability = "full" | "partial" | "none";
 
 export interface UserDoc {
   uid: string;
@@ -54,7 +55,13 @@ export interface ApplicationDoc {
   displayName: string;
   photoURL?: string;
   phone?: string;
+  contactEmail?: string;
   commissionId: string;
+  secondaryInterests?: string[];
+  hasPriorExperience?: boolean;
+  availability?: Availability;
+  skills?: string;
+  motivation?: string;
   role: ApplicationRole;
   status: ApplicationStatus;
   tier: Tier;
