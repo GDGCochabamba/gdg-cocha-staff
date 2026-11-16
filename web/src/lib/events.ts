@@ -38,6 +38,12 @@ export interface CreateEventInput {
   tagline?: string;
   description?: string;
   commissions: Commission[];
+  location?: {
+    name?: string;
+    address?: string;
+    lat?: number;
+    lng?: number;
+  };
   status?: EventStatus;
   cancelCutoffHours?: number;
 }
@@ -58,6 +64,7 @@ export async function createEvent(input: CreateEventInput, createdBy: string): P
     description: input.description?.trim() || "",
     status: input.status ?? "draft",
     commissions: input.commissions,
+    location: input.location,
     cancelCutoffHours: input.cancelCutoffHours ?? 48,
     createdBy,
   };

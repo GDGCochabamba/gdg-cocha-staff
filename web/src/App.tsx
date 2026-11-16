@@ -6,6 +6,7 @@ import MyApplications from "./pages/MyApplications";
 import LeaderPanel from "./pages/LeaderPanel";
 import AdminHome from "./pages/admin/AdminHome";
 import CreateEvent from "./pages/admin/CreateEvent";
+import EditEvent from "./pages/admin/EditEvent";
 import ManageEvent from "./pages/admin/ManageEvent";
 import Layout from "./components/Layout";
 import { useAuth } from "./auth";
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/admin" element={<RequireAdmin><AdminHome /></RequireAdmin>} />
         <Route path="/admin/eventos/nuevo" element={<RequireAdmin><CreateEvent /></RequireAdmin>} />
         <Route path="/admin/eventos/:slug" element={<RequireAdmin><ManageEvent /></RequireAdmin>} />
+        <Route path="/admin/eventos/:slug/editar" element={<RequireAdmin><EditEvent /></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

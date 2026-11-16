@@ -5,6 +5,7 @@ import { getEventBySlug } from "../lib/events";
 import { getApplication } from "../lib/applications";
 import type { ApplicationDoc, EventDoc } from "../types";
 import StatusBadge from "../components/StatusBadge";
+import MapView from "../components/MapView";
 
 export default function EventDetail() {
   const { slug = "" } = useParams();
@@ -36,8 +37,15 @@ export default function EventDetail() {
         <Link to="/" className="text-sm text-gray-500 hover:text-black">← Todos los eventos</Link>
         <h1 className="text-2xl sm:text-3xl font-semibold mt-2">{event.name}</h1>
         <p className="text-sm text-gray-600">{fmtDate(event.dateISO)}</p>
+        {event.location?.name && (
+          <p className="text-sm text-gray-700 mt-1">📍 {event.location.name}{event.location.address ? ` · ${event.location.address}` : ""}</p>
+        )}
         {event.tagline && <p className="text-gray-700 mt-2">{event.tagline}</p>}
       </div>
+
+      {event.location?.lat !== undefined && event.location?.lng !== undefined && (
+        <MapView lat={event.location.lat} lng={event.location.lng} />
+      )}
 
       {event.description && (
         <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 text-sm text-gray-800 whitespace-pre-line">
@@ -88,7 +96,10 @@ export default function EventDetail() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {event.commissions.map((c) => (
             <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-              <div className="font-medium">{c.name}</div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="font-medium">{c.name}</div>
+                <span className="text-xs text-gray-500 whitespace-nowrap">{c.limit ?? 5} cupos</span>
+              </div>
               <p className="text-gray-600 mt-1"><span className="font-medium">Rol: </span>{c.roles}</p>
               <p className="text-gray-600 mt-1"><span className="font-medium">Horario: </span>{c.schedule}</p>
             </div>

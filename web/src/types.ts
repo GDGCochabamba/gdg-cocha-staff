@@ -21,6 +21,14 @@ export interface Commission {
   name: string;
   roles: string;
   schedule: string;
+  limit: number;
+}
+
+export interface EventLocation {
+  name?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface EventDoc {
@@ -32,6 +40,7 @@ export interface EventDoc {
   description?: string;
   status: EventStatus;
   commissions: Commission[];
+  location?: EventLocation;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;

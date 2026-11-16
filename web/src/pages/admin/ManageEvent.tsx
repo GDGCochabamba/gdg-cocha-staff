@@ -85,8 +85,15 @@ export default function ManageEvent() {
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold">{event.name}</h1>
             <p className="text-sm text-gray-500">{fmtDate(event.dateISO)} · <span className="text-gray-700">{event.commissions.length} comisiones</span></p>
+            {event.location?.name && <p className="text-sm text-gray-500">📍 {event.location.name}</p>}
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to={`/admin/eventos/${event.slug}/editar`}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm hover:bg-gray-50"
+            >
+              Editar
+            </Link>
             <select
               value={event.status}
               onChange={(e) => changeStatus(e.target.value as EventStatus)}
@@ -98,6 +105,30 @@ export default function ManageEvent() {
               <option value="past">Finalizado</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+        <div className="text-sm font-medium mb-2">Ocupación por comisión</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-xs">
+          {event.commissions.map((c) => {
+            const approved = apps.filter((a) => a.commissionId === c.id && a.status === "approved").length;
+            const pending = apps.filter((a) => a.commissionId === c.id && a.status === "pending").length;
+            const limit = c.limit ?? 5;
+            const pct = Math.min(100, (approved / limit) * 100);
+            const isFull = approved >= limit;
+            return (
+              <div key={c.id} className="border border-gray-200 rounded p-2">
+                <div className="font-medium truncate">{c.name}</div>
+                <div className="mt-1 h-1.5 rounded bg-gray-100 overflow-hidden">
+                  <div className={`h-full ${isFull ? "bg-red-500" : "bg-green-500"}`} style={{ width: `${pct}%` }} />
+                </div>
+                <div className="mt-1 text-gray-600">
+                  {approved}/{limit} aprobados{pending > 0 ? ` · ${pending} pend.` : ""}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

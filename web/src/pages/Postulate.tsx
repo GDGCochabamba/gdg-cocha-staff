@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuth } from "../auth";
 import { getEventBySlug } from "../lib/events";
 import { createApplication, getApplication } from "../lib/applications";
-import type { EventDoc } from "../types";
+import type { ApplicationDoc, EventDoc } from "../types";
 
 const CLAUSE =
   'Entiendo que mi participación como Staff es fundamental para el evento. Si soy aceptado y falto a mi turno sin dar aviso con al menos 48 horas de anticipación, perderé la oportunidad de ser staff en futuros eventos del GDG Cochabamba y mi perfil será marcado en la base de datos de la comunidad.';
@@ -13,6 +15,7 @@ export default function Postulate() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [event, setEvent] = useState<EventDoc | null>(null);
+  const [apps, setApps] = useState<ApplicationDoc[]>([]);
   const [existing, setExisting] = useState(false);
   const [fullName, setFullName] = useState("");
   const [commissionId, setCommissionId] = useState("");
@@ -25,16 +28,27 @@ export default function Postulate() {
     (async () => {
       const ev = await getEventBySlug(slug);
       setEvent(ev);
-      if (ev && user) {
+      if (!ev) return;
+      if (user) {
         const app = await getApplication(ev.id, user.uid);
         if (app) setExisting(true);
       }
+      const snap = await getDocs(collection(db, "events", ev.id, "applications"));
+      setApps(snap.docs.map((d) => d.data() as ApplicationDoc));
     })();
   }, [slug, user]);
 
   useEffect(() => {
     if (user?.displayName && !fullName) setFullName(user.displayName);
   }, [user, fullName]);
+
+  function spotsLeft(cid: string): { approved: number; pending: number; limit: number; left: number } {
+    const c = event?.commissions.find((x) => x.id === cid);
+    const limit = c?.limit ?? 5;
+    const approved = apps.filter((a) => a.commissionId === cid && a.status === "approved").length;
+    const pending = apps.filter((a) => a.commissionId === cid && a.status === "pending").length;
+    return { approved, pending, limit, left: Math.max(0, limit - (approved + pending)) };
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +60,11 @@ export default function Postulate() {
     }
     if (!commissionId) {
       setError("Elige una comisión");
+      return;
+    }
+    const s = spotsLeft(commissionId);
+    if (s.left <= 0) {
+      setError("Esta comisión ya no tiene cupos disponibles.");
       return;
     }
     if (!accepted) {
@@ -88,6 +107,7 @@ export default function Postulate() {
   }
 
   const selected = event.commissions.find((c) => c.id === commissionId);
+  const selectedSpots = commissionId ? spotsLeft(commissionId) : null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -110,9 +130,7 @@ export default function Postulate() {
             maxLength={80}
             required
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Como te conocen. Aparecerá en tu certificado si llegas a Tier 1.
-          </p>
+          <p className="text-xs text-gray-500 mt-1">Como te conocen. Aparecerá en tu certificado si llegas a Tier 1.</p>
         </div>
 
         <div>
@@ -124,14 +142,25 @@ export default function Postulate() {
             required
           >
             <option value="">— Elige una comisión —</option>
-            {event.commissions.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            {event.commissions.map((c) => {
+              const s = spotsLeft(c.id);
+              const full = s.left <= 0;
+              return (
+                <option key={c.id} value={c.id} disabled={full}>
+                  {c.name} ({s.approved + s.pending}/{s.limit}){full ? " — llena" : ""}
+                </option>
+              );
+            })}
           </select>
           {selected && (
             <div className="mt-3 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
               <p><span className="font-medium">Rol:</span> {selected.roles}</p>
               <p><span className="font-medium">Horario:</span> {selected.schedule}</p>
+              {selectedSpots && (
+                <p className="text-xs">
+                  Cupos: <span className="font-medium">{selectedSpots.left}</span> de {selectedSpots.limit} disponibles.
+                </p>
+              )}
             </div>
           )}
         </div>
