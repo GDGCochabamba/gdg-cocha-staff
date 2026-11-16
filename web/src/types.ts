@@ -47,12 +47,15 @@ export interface EventDoc {
   slug: string;
   name: string;
   dateISO: string;
+  startTime?: string;
+  endTime?: string;
   tagline?: string;
   description?: string;
   status: EventStatus;
   commissions: Commission[];
   location?: EventLocation;
   customQuestions?: CustomQuestion[];
+  whatsappGroupUrl?: string;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;

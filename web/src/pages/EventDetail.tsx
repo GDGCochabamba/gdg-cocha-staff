@@ -36,7 +36,12 @@ export default function EventDetail() {
       <div>
         <Link to="/" className="text-sm text-gray-500 hover:text-black">← Todos los eventos</Link>
         <h1 className="text-2xl sm:text-3xl font-semibold mt-2">{event.name}</h1>
-        <p className="text-sm text-gray-600">{fmtDate(event.dateISO)}</p>
+        <p className="text-sm text-gray-600">
+          {fmtDate(event.dateISO)}
+          {(event.startTime || event.endTime) && (
+            <> · {event.startTime || "?"}{event.endTime ? ` – ${event.endTime}` : ""}</>
+          )}
+        </p>
         {event.location?.name && (
           <p className="text-sm text-gray-700 mt-1">📍 {event.location.name}{event.location.address ? ` · ${event.location.address}` : ""}</p>
         )}
@@ -62,9 +67,19 @@ export default function EventDetail() {
               <StatusBadge status={application.status} />
               <span className="text-sm text-gray-600">Comisión: {commissionNameOf(event, application.commissionId)}</span>
             </div>
+            {application.status === "approved" && event.whatsappGroupUrl && (
+              <a
+                href={event.whatsappGroupUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-2 mt-2 bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                <span>💬</span> Unirme al grupo de WhatsApp del staff
+              </a>
+            )}
             <Link
               to={`/mis-postulaciones`}
-              className="inline-block mt-1 text-sm text-gBlue hover:underline"
+              className="block mt-1 text-sm text-gBlue hover:underline"
             >
               Ver mis postulaciones
             </Link>

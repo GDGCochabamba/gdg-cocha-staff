@@ -84,12 +84,22 @@ export default function MyApplications() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1 items-center">
                   {ev && <Link to={`/eventos/${ev.slug}`} className="text-xs text-gBlue hover:underline">Ver evento →</Link>}
                   {a.role === "leader" && ev && (
                     <Link to={`/lider/${ev.slug}`} className="text-xs text-purple-700 hover:underline">
                       Panel líder →
                     </Link>
+                  )}
+                  {a.status === "approved" && ev?.whatsappGroupUrl && (
+                    <a
+                      href={ev.whatsappGroupUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-xs text-green-700 hover:underline"
+                    >
+                      💬 Grupo WhatsApp del staff
+                    </a>
                   )}
                   {canCancel && (
                     <button onClick={() => cancel(a)} className="text-xs text-red-700 hover:underline">

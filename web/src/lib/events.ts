@@ -35,6 +35,8 @@ export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
 export interface CreateEventInput {
   name: string;
   dateISO: string;
+  startTime?: string;
+  endTime?: string;
   tagline?: string;
   description?: string;
   commissions: Commission[];
@@ -45,6 +47,7 @@ export interface CreateEventInput {
     lat?: number;
     lng?: number;
   };
+  whatsappGroupUrl?: string;
   status?: EventStatus;
   cancelCutoffHours?: number;
 }
@@ -61,12 +64,15 @@ export async function createEvent(input: CreateEventInput, createdBy: string): P
     slug,
     name: input.name.trim(),
     dateISO: input.dateISO,
+    startTime: input.startTime ?? "",
+    endTime: input.endTime ?? "",
     tagline: input.tagline?.trim() || "",
     description: input.description?.trim() || "",
     status: input.status ?? "draft",
     commissions: input.commissions,
     customQuestions: input.customQuestions ?? [],
     location: input.location,
+    whatsappGroupUrl: input.whatsappGroupUrl?.trim() || "",
     cancelCutoffHours: input.cancelCutoffHours ?? 48,
     createdBy,
   };

@@ -33,12 +33,15 @@ export default function EditEvent() {
       setInitial({
         name: ev.name,
         dateISO: ev.dateISO,
+        startTime: ev.startTime ?? "",
+        endTime: ev.endTime ?? "",
         tagline: ev.tagline ?? "",
         description: ev.description ?? "",
         locationName: ev.location?.name ?? "",
         locationAddress: ev.location?.address ?? "",
         lat: ev.location?.lat,
         lng: ev.location?.lng,
+        whatsappGroupUrl: ev.whatsappGroupUrl ?? "",
         selectedCatalog: selected,
         commissionLimits: limits,
         custom,
@@ -73,6 +76,8 @@ export default function EditEvent() {
       await updateEvent(event.slug, {
         name: v.name.trim(),
         dateISO: v.dateISO,
+        startTime: v.startTime,
+        endTime: v.endTime,
         tagline: v.tagline.trim(),
         description: v.description.trim(),
         commissions,
@@ -83,6 +88,7 @@ export default function EditEvent() {
           lat: v.lat,
           lng: v.lng,
         },
+        whatsappGroupUrl: v.whatsappGroupUrl.trim(),
         status: v.status,
         cancelCutoffHours: v.cancelHours,
       });

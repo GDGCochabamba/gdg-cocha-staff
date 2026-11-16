@@ -8,12 +8,15 @@ import type { Commission, CustomQuestion, EventStatus } from "../../types";
 export interface EventFormValues {
   name: string;
   dateISO: string;
+  startTime: string;
+  endTime: string;
   tagline: string;
   description: string;
   locationName: string;
   locationAddress: string;
   lat?: number;
   lng?: number;
+  whatsappGroupUrl: string;
   selectedCatalog: Set<string>;
   commissionLimits: Record<string, number>;
   custom: Commission[];
@@ -133,6 +136,24 @@ export default function EventForm({ initial, onSubmit, submitting, error, submit
             required
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Hora de inicio</label>
+          <input
+            type="time"
+            value={v.startTime}
+            onChange={(e) => setV({ ...v, startTime: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Hora de cierre</label>
+          <input
+            type="time"
+            value={v.endTime}
+            onChange={(e) => setV({ ...v, endTime: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          />
+        </div>
       </div>
 
       <div>
@@ -177,7 +198,14 @@ export default function EventForm({ initial, onSubmit, submitting, error, submit
         <MapPicker
           lat={v.lat}
           lng={v.lng}
-          onChange={({ lat, lng }) => setV({ ...v, lat, lng })}
+          onChange={({ lat, lng, label }) => {
+            setV({
+              ...v,
+              lat,
+              lng,
+              locationAddress: label || v.locationAddress,
+            });
+          }}
         />
         {v.lat !== undefined && v.lng !== undefined && (
           <p className="text-xs text-gray-500">
@@ -187,7 +215,20 @@ export default function EventForm({ initial, onSubmit, submitting, error, submit
             </button>
           </p>
         )}
-        <p className="text-xs text-gray-500">Click en el mapa para marcar la ubicación.</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Link del grupo de WhatsApp</label>
+        <input
+          type="url"
+          value={v.whatsappGroupUrl}
+          onChange={(e) => setV({ ...v, whatsappGroupUrl: e.target.value })}
+          placeholder="https://chat.whatsapp.com/..."
+          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Solo visible para postulantes aprobados y líderes. No se muestra públicamente.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
