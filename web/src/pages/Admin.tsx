@@ -9,6 +9,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useAuth } from "../auth";
 import { COMMISSIONS, commissionName } from "../config/commissions";
 import type { ShiftDoc, UserDoc } from "../types";
 import StatusBadge from "../components/StatusBadge";
@@ -16,6 +17,7 @@ import TierBadge from "../components/TierBadge";
 import { computeTier } from "../lib/reputation";
 
 export default function Admin() {
+  const { user: me } = useAuth();
   const [users, setUsers] = useState<UserDoc[]>([]);
   const [shifts, setShifts] = useState<ShiftDoc[]>([]);
   const [filter, setFilter] = useState<string>("all");
@@ -72,6 +74,18 @@ export default function Admin() {
     await updateDoc(doc(db, "users", u.uid), { role: "leader" });
   }
   async function demote(u: UserDoc) {
+    await updateDoc(doc(db, "users", u.uid), { role: "volunteer" });
+  }
+  async function makeAdmin(u: UserDoc) {
+    if (!confirm(`¿Confirmas hacer admin a ${u.displayName}? Tendrá acceso total.`)) return;
+    await updateDoc(doc(db, "users", u.uid), { role: "admin", status: "approved" });
+  }
+  async function removeAdmin(u: UserDoc) {
+    if (me && u.uid === me.uid) {
+      alert("No puedes quitarte admin a ti mismo. Pide a otro admin que lo haga.");
+      return;
+    }
+    if (!confirm(`¿Confirmas quitar admin a ${u.displayName}?`)) return;
     await updateDoc(doc(db, "users", u.uid), { role: "volunteer" });
   }
   async function toggleInitiative(u: UserDoc) {
@@ -165,11 +179,17 @@ export default function Admin() {
                         <button onClick={() => reject(u)} className="text-xs px-2 py-1 bg-red-600 text-white rounded">Rechazar</button>
                       </>
                     )}
-                    {u.status === "approved" && u.role !== "leader" && (
+                    {u.status === "approved" && u.role !== "leader" && u.role !== "admin" && (
                       <button onClick={() => promote(u)} className="text-xs px-2 py-1 bg-purple-600 text-white rounded">Hacer líder</button>
                     )}
                     {u.role === "leader" && (
                       <button onClick={() => demote(u)} className="text-xs px-2 py-1 bg-gray-500 text-white rounded">Quitar líder</button>
+                    )}
+                    {u.status === "approved" && u.role !== "admin" && (
+                      <button onClick={() => makeAdmin(u)} className="text-xs px-2 py-1 bg-black text-white rounded">Hacer admin</button>
+                    )}
+                    {u.role === "admin" && me && u.uid !== me.uid && (
+                      <button onClick={() => removeAdmin(u)} className="text-xs px-2 py-1 bg-gray-700 text-white rounded">Quitar admin</button>
                     )}
                     {u.status === "approved" && (
                       <button
